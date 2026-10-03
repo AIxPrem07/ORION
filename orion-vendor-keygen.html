@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ORION — Vendor Master Key Generator (Private Tool)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #f59e0b;
+      --primary-hover: #d97706;
+      --accent: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #18191b 0%, #27272a 100%);
+      padding: 28px 24px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 9999px;
+      background: rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    p.subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .form-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 14px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    button.btn-generate {
+      margin-top: 8px;
+      background: var(--primary);
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    button.btn-generate:hover {
+      background: var(--primary-hover);
+    }
+
+    button.btn-generate:active {
+      transform: scale(0.99);
+    }
+
+    /* Result Card */
+    .result-card {
+      display: none;
+      margin-top: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .key-display {
+      background: #0f172a;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #fcd34d;
+      text-align: center;
+      user-select: all;
+      margin: 10px 0;
+    }
+
+    .btn-copy {
+      width: 100%;
+      background: #059669;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+
+    .btn-copy:hover {
+      background: #047857;
+    }
+
+    .copied-toast {
+      display: none;
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    .footer {
+      padding: 16px;
+      background: #111827;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="public/logo.png" alt="ORION" style="width: 52px; height: 52px; border-radius: 14px; margin-bottom: 12px; border: 1.5px solid rgba(255,255,255,0.2); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);">
+      <div class="badge">Vendor Master Tool</div>
+      <h1>ORION License Generator</h1>
+      <p class="subtitle">Generate genuine Product Keys for client installations</p>
+    </div>
+
+    <form class="form-body" id="keygenForm" onsubmit="handleGenerate(event)">
+      <div class="field">
+        <label for="clientName">Client Business / Brand Name *</label>
+        <input type="text" id="clientName" placeholder="e.g. Balaji Garments or Sharma Textiles" required autofocus>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="licensePlan">License Plan</label>
+          <select id="licensePlan">
+            <option value="lifetime">Lifetime License</option>
+            <option value="1year">1 Year Annual</option>
+            <option value="3year">3 Years License</option>
+            <option value="trial">30-Day Trial</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="licenseEdition">Edition</label>
+          <select id="licenseEdition">
+            <option value="pro">Professional (PRO)</option>
+            <option value="enterprise">Enterprise (ENT)</option>
+            <option value="standard">Standard (STD)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="deviceId">Device ID (Optional — leave blank for any 1 PC)</label>
+        <input type="text" id="deviceId" placeholder="e.g. DEV-MAC-8A2F-9C14">
+      </div>
+
+      <button type="submit" class="btn-generate">Generate Product Key</button>
+
+      <div class="result-card" id="resultCard">
+        <div style="font-size: 12px; font-weight: 700; color: #34d399; text-align: center;">✓ Genuine Key Generated!</div>
+        <div class="key-display" id="productKeyText">ORION-PRO-XXXX-XXXX-XXXX-XXXX</div>
+        <button type="button" class="btn-copy" onclick="copyClientMessage()">Copy WhatsApp / Email Client Instructions</button>
+        <div class="copied-toast" id="copiedToast">✓ Copied to clipboard! Ready to send to client.</div>
+      </div>
+    </form>
+
+    <div class="footer">
+      <div>ORION Administration • Compatible with macOS & Windows</div>
+      <div style="margin-top: 6px; font-weight: 600; color: #cbd5e1;">&copy; 2026 ORION INC. All rights reserved.</div>
+    </div>
+  </div>
+
+  <script>
+    const MASTER_SALT = 'ORION_MASTER_OFFLINE_SECRET_SALT_2026_HMAC';
+
+    async function sha256Hex(text) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    function normalizeName(name) {
+      return name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    function planChar(plan) {
+      switch (plan) {
+        case 'lifetime': return 'L';
+        case '1year': return '1';
+        case '3year': return '3';
+        case 'trial': return 'T';
+        default: return 'L';
+      }
+    }
+
+    function editionCode(ed) {
+      switch (ed) {
+        case 'pro': return 'PRO';
+        case 'enterprise': return 'ENT';
+        case 'standard': return 'STD';
+        default: return 'PRO';
+      }
+    }
+
+    let lastGenerated = null;
+
+    async function handleGenerate(e) {
+      e.preventDefault();
+      const name = document.getElementById('clientName').value.trim();
+      const plan = document.getElementById('licensePlan').value;
+      const edition = document.getElementById('licenseEdition').value;
+      const dev = document.getElementById('deviceId').value.trim();
+
+      if (!name) return;
+
+      const ed = editionCode(edition);
+      const plChar = planChar(plan);
+
+      // 3 random hex chars
+      const randHex = Array.from(crypto.getRandomValues(new Uint8Array(2)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase()
+        .slice(0, 3);
+
+      const planSegment = `${plChar}${randHex}`;
+
+      const normName = normalizeName(name);
+      const clientHash = (await sha256Hex(`${normName}:${MASTER_SALT}`)).slice(0, 4).toUpperCase();
+
+      const sigPayload = `${ed}:${plChar}:${clientHash}:${MASTER_SALT}`;
+      const sig8 = (await sha256Hex(sigPayload)).slice(0, 8).toUpperCase();
+
+      const key = `ORION-${ed}-${planSegment}-${clientHash}-${sig8.slice(0, 4)}-${sig8.slice(4, 8)}`;
+
+      lastGenerated = {
+        key,
+        clientName: name,
+        plan: plan.toUpperCase(),
+        edition: ed,
+        deviceId: dev || 'Universal (Any 1 PC)'
+      };
+
+      document.getElementById('productKeyText').innerText = key;
+      document.getElementById('resultCard').style.display = 'block';
+    }
+
+    function copyClientMessage() {
+      if (!lastGenerated) return;
+
+      const msg = `====================================================
+ORION — License Activation
+====================================================
+Client Business: ${lastGenerated.clientName}
+License Plan: ${lastGenerated.plan} (${lastGenerated.edition} Edition)
+Product Key: ${lastGenerated.key}
+Device Lock: ${lastGenerated.deviceId}
+
+How to Activate:
+1. Install ORION on your computer (macOS or Windows).
+2. Launch the application.
+3. Enter your Business Name: "${lastGenerated.clientName}"
+4. Enter your Product Key: ${lastGenerated.key}
+5. Create your own Login ID and password.
+6. Start using ORION!
+====================================================`;
+
+      navigator.clipboard.writeText(msg).then(() => {
+        const toast = document.getElementById('copiedToast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+      });
+    }
+  </script>
+</body>
+</html>
