@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export function PageHeader({ title, subtitle, actions, breadcrumb }: {
-  title: string; subtitle?: string; actions?: ReactNode; breadcrumb?: Array<{ label: string }>
+  title: ReactNode; subtitle?: string; actions?: ReactNode; breadcrumb?: Array<{ label: string }>
 }) {
   return (
     <div className="flex items-start justify-between mb-5">

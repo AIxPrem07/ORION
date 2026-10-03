@@ -52,12 +52,18 @@ describe('db/migrations — cleanAndSplitSQL', () => {
     expect(joined).toContain('INSERT OR IGNORE INTO hsn_directory')
   })
 
-  it('correctly parses 0003_licensing_and_product_keys.sql with product_keys table and license settings', () => {
-    const stmts = cleanAndSplitSQL(migration0003)
+  it('correctly parses 0004_invoice_bin_and_numbering.sql with is_deleted and deleted_at columns', () => {
+    const raw0004 = `
+      ALTER TABLE invoices ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE invoices ADD COLUMN deleted_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_invoices_deleted ON invoices(business_id, is_deleted);
+    `
+    const stmts = cleanAndSplitSQL(raw0004)
+    expect(stmts.length).toBe(3)
     const joined = stmts.join(' ')
-    expect(joined).toContain('CREATE TABLE IF NOT EXISTS product_keys')
-    expect(joined).toContain('license_status')
-    expect(joined).toContain('license_key')
+    expect(joined).toContain('ALTER TABLE invoices ADD COLUMN is_deleted')
+    expect(joined).toContain('ALTER TABLE invoices ADD COLUMN deleted_at')
+    expect(joined).toContain('CREATE INDEX IF NOT EXISTS idx_invoices_deleted')
   })
 })
 

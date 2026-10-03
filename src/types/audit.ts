@@ -13,6 +13,7 @@ export type AuditAction =
   | 'SETTINGS_CHANGED'
   | 'IMPORT'
   | 'EXPORT'
+  | 'RESTORED'
 
 export type AuditEntityType =
   | 'INVOICE'

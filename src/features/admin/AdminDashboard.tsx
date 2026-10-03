@@ -1339,7 +1339,7 @@ Activation Instructions:
           <span>Master Administration Control Plane</span>
           <span>&bull;</span>
           <span className="font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-            v1.0.0 Pro
+            v1.1 Pro
           </span>
         </div>
       </footer>

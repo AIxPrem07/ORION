@@ -56,8 +56,8 @@ export default function AppSettings() {
     // Simulate/Perform update check
     setTimeout(() => {
       setIsCheckingUpdate(false)
-      setUpdateMessage('You are running the latest version (v1.0.0). Your software and database are completely up to date.')
-      info('Software is up to date (v1.0.0)')
+      setUpdateMessage('You are running the latest version (v1.1). Your software and database are completely up to date.')
+      info('Software is up to date (v1.1)')
     }, 900)
   }
 
@@ -131,7 +131,7 @@ export default function AppSettings() {
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-gray-900">Software & System Updates</h3>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  <CheckCircle2 size={12} className="mr-1" /> v1.0.0 (Latest)
+                  <CheckCircle2 size={12} className="mr-1" /> v1.1 (Latest)
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -174,7 +174,7 @@ export default function AppSettings() {
               <ShieldCheck size={14} className="text-indigo-600" />
               App Version
             </div>
-            <div className="text-gray-900 font-mono font-medium">ORION v1.0.0</div>
+            <div className="text-gray-900 font-mono font-medium">ORION v1.1</div>
             <div className="text-[11px] text-gray-500 mt-0.5">Application Release</div>
           </div>
 

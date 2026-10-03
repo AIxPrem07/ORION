@@ -76,6 +76,9 @@ function rowToInvoice(r: Record<string, unknown>): Invoice {
     shippingCharges: (r.shipping_charges as number) ?? 0,
     additionalCharges: (r.additional_charges as number) ?? 0,
     additionalChargesLabel: (r.additional_charges_label as string) ?? null,
+    // Recycle Bin
+    isDeleted: Boolean(r.is_deleted),
+    deletedAt: (r.deleted_at as string) ?? null,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
   }
@@ -323,6 +326,7 @@ export async function finalizeInvoice(
   businessId: string,
   invoicePrefix = 'INV',
   createdBy?: string,
+  customInvoiceNumber?: string,
 ): Promise<InvoiceWithItems> {
   // Get existing invoice
   const existing = await getInvoiceWithItems(invoiceId)
@@ -335,23 +339,28 @@ export async function finalizeInvoice(
   let assignedNumber = ''
 
   await dbTransaction(async (tx) => {
-    // Get next invoice number atomically within the transaction
-    const { invoiceNumber } = await getNextInvoiceNumber({ businessId, prefix: invoicePrefix })
-    assignedNumber = invoiceNumber
+    // If a custom invoice number was specified, use it; otherwise get next sequential number
+    const customNum = customInvoiceNumber?.trim()
+    if (customNum) {
+      assignedNumber = customNum
+    } else {
+      const { invoiceNumber } = await getNextInvoiceNumber({ businessId, prefix: invoicePrefix })
+      assignedNumber = invoiceNumber
+    }
 
     // Verify number doesn't already exist (safety net for the UNIQUE constraint)
     const duplicateCheck = await tx.select<{ id: string }>(
       `SELECT id FROM invoices WHERE business_id = ? AND invoice_number = ? AND id != ?`,
-      [businessId, invoiceNumber, invoiceId],
+      [businessId, assignedNumber, invoiceId],
     )
     if (duplicateCheck.length > 0) {
-      throw new Error(`Invoice number ${invoiceNumber} already exists.`)
+      throw new Error(`Invoice number "${assignedNumber}" already exists.`)
     }
 
     // Update invoice to FINALIZED
     await tx.execute(
       `UPDATE invoices SET invoice_number = ?, status = 'FINALIZED', updated_at = ? WHERE id = ?`,
-      [invoiceNumber, now, invoiceId],
+      [assignedNumber, now, invoiceId],
     )
 
     // Deduct stock for each product line item
@@ -384,7 +393,7 @@ export async function finalizeInvoice(
         quantity: -actualQuantity,
         referenceType: 'INVOICE',
         referenceId: invoiceId,
-        notes: `Sale: ${invoiceNumber} (${item.description})`,
+        notes: `Sale: ${assignedNumber} (${item.description})`,
         createdBy,
         createdAt: movementDate,
       }, tx)
@@ -400,7 +409,7 @@ export async function finalizeInvoice(
         partyId: existing.customerId,
         referenceType: 'INVOICE',
         referenceId: invoiceId,
-        description: `Invoice ${invoiceNumber} — ${customerSnapshot.name}`,
+        description: `Invoice ${assignedNumber} — ${customerSnapshot.name}`,
         debit: existing.totalAmount,
         credit: 0,
       }, tx)
@@ -489,6 +498,277 @@ export async function cancelInvoice(
 }
 
 // ============================================================
+// RECYCLE BIN & DELETE INVOICE
+// ============================================================
+
+/**
+ * Moves an invoice to the Recycle Bin (Soft Delete).
+ * If the invoice was finalized, automatically reverses stock deduction and ledger entries
+ * so inventory counts and customer balances are not distorted while the invoice is in the bin.
+ */
+export async function moveInvoiceToBin(
+  invoiceId: string,
+  businessId: string,
+  createdBy?: string,
+): Promise<void> {
+  const existing = await getInvoiceWithItems(invoiceId)
+  if (!existing) throw new Error('Invoice not found')
+  if (existing.isDeleted) throw new Error('Invoice is already in the Recycle Bin.')
+
+  const now = nowISO()
+
+  await dbTransaction(async (tx) => {
+    await tx.execute(
+      `UPDATE invoices SET is_deleted = 1, deleted_at = ?, updated_at = ? WHERE id = ? AND business_id = ?`,
+      [now, now, invoiceId, businessId],
+    )
+
+    // Reverse stock movements if finalized so warehouse inventory isn't missing
+    if (existing.status === 'FINALIZED' || existing.status === 'PARTIALLY_PAID') {
+      for (const item of existing.items) {
+        if (!item.productId) continue
+        const actualQuantity = item.quantity >= 100
+          ? Math.round(item.quantity / 100)
+          : (item.quantity > 0 ? item.quantity : 0)
+        if (actualQuantity <= 0) continue
+
+        await recordStockMovement({
+          businessId,
+          productId: item.productId,
+          movementType: 'SALE_RETURN',
+          quantity: actualQuantity,
+          referenceType: 'INVOICE',
+          referenceId: invoiceId,
+          notes: `Moved to Bin: ${existing.invoiceNumber} (${item.description})`,
+          createdBy,
+          createdAt: now,
+        }, tx)
+      }
+
+      // Reverse customer ledger entry
+      if (existing.customerId) {
+        await createLedgerEntry({
+          businessId,
+          entryDate: now.slice(0, 10),
+          partyType: 'CUSTOMER',
+          partyId: existing.customerId,
+          referenceType: 'INVOICE',
+          referenceId: invoiceId,
+          description: `Invoice ${existing.invoiceNumber} moved to Bin (Reversal)`,
+          debit: 0,
+          credit: existing.totalAmount,
+        }, tx)
+      }
+    }
+  })
+
+  await recordAuditEvent({
+    businessId,
+    userId: createdBy,
+    action: 'DELETED',
+    entityType: 'INVOICE',
+    entityId: invoiceId,
+    newValues: { inBin: true, deletedAt: now },
+  })
+}
+
+/**
+ * Restores an invoice from the Recycle Bin back to active invoices.
+ * If previously finalized, re-deducts the stock and reinstates the customer ledger.
+ */
+export async function restoreInvoiceFromBin(
+  invoiceId: string,
+  businessId: string,
+  createdBy?: string,
+): Promise<void> {
+  const existing = await getInvoiceWithItems(invoiceId)
+  if (!existing) throw new Error('Invoice not found')
+  if (!existing.isDeleted) throw new Error('Invoice is not in the Recycle Bin.')
+
+  const now = nowISO()
+
+  await dbTransaction(async (tx) => {
+    await tx.execute(
+      `UPDATE invoices SET is_deleted = 0, deleted_at = NULL, updated_at = ? WHERE id = ? AND business_id = ?`,
+      [now, invoiceId, businessId],
+    )
+
+    // Re-deduct stock if finalized
+    if (existing.status === 'FINALIZED' || existing.status === 'PARTIALLY_PAID') {
+      for (const item of existing.items) {
+        if (!item.productId) continue
+        const actualQuantity = item.quantity >= 100
+          ? Math.round(item.quantity / 100)
+          : (item.quantity > 0 ? item.quantity : 0)
+        if (actualQuantity <= 0) continue
+
+        await recordStockMovement({
+          businessId,
+          productId: item.productId,
+          movementType: 'SALE',
+          quantity: -actualQuantity,
+          referenceType: 'INVOICE',
+          referenceId: invoiceId,
+          notes: `Restored from Bin: ${existing.invoiceNumber} (${item.description})`,
+          createdBy,
+          createdAt: now,
+        }, tx)
+      }
+
+      // Re-create ledger debit
+      if (existing.customerId) {
+        await createLedgerEntry({
+          businessId,
+          entryDate: now.slice(0, 10),
+          partyType: 'CUSTOMER',
+          partyId: existing.customerId,
+          referenceType: 'INVOICE',
+          referenceId: invoiceId,
+          description: `Invoice ${existing.invoiceNumber} restored from Bin`,
+          debit: existing.totalAmount,
+          credit: 0,
+        }, tx)
+      }
+    }
+  })
+
+  await recordAuditEvent({
+    businessId,
+    userId: createdBy,
+    action: 'RESTORED',
+    entityType: 'INVOICE',
+    entityId: invoiceId,
+    newValues: { inBin: false },
+  })
+}
+
+/**
+ * Permanently deletes an invoice and its line items from the database.
+ */
+export async function permanentlyDeleteInvoice(
+  invoiceId: string,
+  businessId: string,
+  userId?: string,
+): Promise<void> {
+  const existing = await getInvoice(invoiceId)
+  if (!existing) throw new Error('Invoice not found')
+
+  await dbTransaction(async (tx) => {
+    await tx.execute(`DELETE FROM invoice_items WHERE invoice_id = ?`, [invoiceId])
+    await tx.execute(`DELETE FROM invoices WHERE id = ? AND business_id = ?`, [invoiceId, businessId])
+  })
+
+  await recordAuditEvent({
+    businessId,
+    userId,
+    action: 'DELETED',
+    entityType: 'INVOICE',
+    entityId: invoiceId,
+    newValues: { permanentlyDeleted: true, invoiceNumber: existing.invoiceNumber },
+  })
+}
+
+/**
+ * Empties all invoices currently in the Recycle Bin.
+ */
+export async function emptyInvoiceBin(
+  businessId: string,
+  userId?: string,
+): Promise<number> {
+  const binned = await dbSelect<{ id: string }>(
+    `SELECT id FROM invoices WHERE business_id = ? AND COALESCE(is_deleted, 0) = 1`,
+    [businessId],
+  )
+  if (binned.length === 0) return 0
+
+  await dbTransaction(async (tx) => {
+    for (const inv of binned) {
+      await tx.execute(`DELETE FROM invoice_items WHERE invoice_id = ?`, [inv.id])
+      await tx.execute(`DELETE FROM invoices WHERE id = ? AND business_id = ?`, [inv.id, businessId])
+    }
+  })
+
+  await recordAuditEvent({
+    businessId,
+    userId,
+    action: 'DELETED',
+    entityType: 'INVOICE',
+    entityId: businessId,
+    newValues: { emptiedRecycleBin: true, count: binned.length },
+  })
+
+  return binned.length
+}
+
+/**
+ * Returns the count of invoices currently in the Recycle Bin.
+ */
+export async function getBinInvoicesCount(businessId: string): Promise<number> {
+  const res = await dbSelect<{ total: number }>(
+    `SELECT COUNT(*) as total FROM invoices WHERE business_id = ? AND COALESCE(is_deleted, 0) = 1`,
+    [businessId],
+  )
+  return res[0]?.total ?? 0
+}
+
+/**
+ * Change / Edit invoice number on an existing invoice.
+ */
+export async function updateInvoiceNumber(
+  invoiceId: string,
+  businessId: string,
+  newInvoiceNumber: string,
+  userId?: string,
+): Promise<void> {
+  const cleanNumber = newInvoiceNumber.trim()
+  if (!cleanNumber) {
+    throw new Error('Invoice number cannot be empty.')
+  }
+
+  const existing = await getInvoice(invoiceId)
+  if (!existing) throw new Error('Invoice not found')
+  if (existing.invoiceNumber === cleanNumber) return // No change
+
+  // Check uniqueness across the business
+  const duplicate = await dbSelect<{ id: string }>(
+    `SELECT id FROM invoices WHERE business_id = ? AND invoice_number = ? AND id != ?`,
+    [businessId, cleanNumber, invoiceId],
+  )
+  if (duplicate.length > 0) {
+    throw new Error(`Invoice number "${cleanNumber}" is already in use by another invoice.`)
+  }
+
+  const now = nowISO()
+  await dbTransaction(async (tx) => {
+    await tx.execute(
+      `UPDATE invoices SET invoice_number = ?, updated_at = ? WHERE id = ? AND business_id = ?`,
+      [cleanNumber, now, invoiceId, businessId],
+    )
+
+    // Update references in ledger entries
+    await tx.execute(
+      `UPDATE ledger_entries SET description = REPLACE(description, ?, ?) WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`,
+      [existing.invoiceNumber, cleanNumber, businessId, invoiceId],
+    )
+
+    // Update references in stock movements
+    await tx.execute(
+      `UPDATE stock_movements SET notes = REPLACE(notes, ?, ?) WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`,
+      [existing.invoiceNumber, cleanNumber, businessId, invoiceId],
+    )
+  })
+
+  await recordAuditEvent({
+    businessId,
+    userId,
+    action: 'UPDATED',
+    entityType: 'INVOICE',
+    entityId: invoiceId,
+    newValues: { oldInvoiceNumber: existing.invoiceNumber, newInvoiceNumber: cleanNumber },
+  })
+}
+
+// ============================================================
 // QUERIES
 // ============================================================
 
@@ -521,12 +801,14 @@ export interface InvoiceListFilters {
   toDate?: string
   page?: number
   pageSize?: number
+  inBin?: boolean
 }
 
 export async function listInvoices(
   filters: InvoiceListFilters,
 ): Promise<{ data: Invoice[]; total: number }> {
-  const conditions: string[] = ['business_id = ?']
+  const inBin = Boolean(filters.inBin)
+  const conditions: string[] = ['business_id = ?', inBin ? 'COALESCE(is_deleted, 0) = 1' : 'COALESCE(is_deleted, 0) = 0']
   const params: unknown[] = [filters.businessId]
 
   if (filters.search) {

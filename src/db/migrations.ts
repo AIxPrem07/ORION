@@ -14,6 +14,7 @@
 import migration_0001 from '../../src-tauri/migrations/0001_initial.sql?raw'
 import migration_0002 from '../../src-tauri/migrations/0002_gst_enhancements.sql?raw'
 import migration_0003 from '../../src-tauri/migrations/0003_licensing_and_product_keys.sql?raw'
+import migration_0004 from '../../src-tauri/migrations/0004_invoice_bin_and_numbering.sql?raw'
 
 import { dbExecute, dbSelect, getDb } from './client'
 import { nowISO } from '@utils/date'
@@ -40,6 +41,11 @@ const MIGRATIONS: Migration[] = [
     version: 3,
     description: 'Product keys & offline licensing system',
     sql: migration_0003,
+  },
+  {
+    version: 4,
+    description: 'Invoice Recycle Bin & Custom Numbering',
+    sql: migration_0004,
   },
 ]
 

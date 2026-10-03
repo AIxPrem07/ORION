@@ -88,6 +88,9 @@ export interface Invoice {
   shippingCharges: Paise
   additionalCharges: Paise
   additionalChargesLabel: string | null
+  // Recycle Bin
+  isDeleted?: boolean
+  deletedAt?: ISODateTimeString | null
   createdAt: ISODateTimeString
   updatedAt: ISODateTimeString
 }
@@ -98,6 +101,7 @@ export interface InvoiceWithItems extends Invoice {
 
 /** Mutable form state for the invoice editor */
 export interface InvoiceFormData {
+  customInvoiceNumber?: string // Allows manual or custom invoice number override
   customerId: UUID | null
   customerSnapshot: CustomerSnapshot | null
   invoiceDate: ISODateString

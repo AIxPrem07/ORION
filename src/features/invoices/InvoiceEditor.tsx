@@ -7,7 +7,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Save, CheckCircle2, ArrowLeft, X, ShoppingBag, Printer, FileDown, MessageSquare, Copy, Eye, Download, Sparkles, CreditCard } from 'lucide-react'
+import { Plus, Trash2, Save, CheckCircle2, ArrowLeft, X, ShoppingBag, Printer, FileDown, MessageSquare, Copy, Eye, Download, Sparkles, CreditCard, Edit2, RotateCcw, AlertTriangle } from 'lucide-react'
 import { PageHeader } from '@components/layout/PageHeader'
 import { Button } from '@components/ui/Button'
 import { Input } from '@components/ui/Input'
@@ -27,6 +27,10 @@ import {
   duplicateInvoice,
   createAndFinalizeInvoice,
   updateDraftInvoice,
+  moveInvoiceToBin,
+  restoreInvoiceFromBin,
+  permanentlyDeleteInvoice,
+  updateInvoiceNumber,
 } from '@services/invoice.service'
 import { recordInvoicePayment } from '@services/payment.service'
 import {
@@ -150,6 +154,12 @@ export default function InvoiceEditor() {
   const [paymentRefInput, setPaymentRefInput] = useState('')
   const [paymentNotesInput, setPaymentNotesInput] = useState('')
   const [isRecordingPayment, setIsRecordingPayment] = useState(false)
+
+  // Edit Invoice Number state
+  const [showEditNumberModal, setShowEditNumberModal] = useState(false)
+  const [editNumberValue, setEditNumberValue] = useState('')
+  const [isUpdatingInvoiceNumber, setIsUpdatingInvoiceNumber] = useState(false)
+  const [editNumberError, setEditNumberError] = useState('')
 
   // Load saved paper size, theme preferences, and custom design
   useEffect(() => {
@@ -602,50 +612,171 @@ export default function InvoiceEditor() {
     }
   }
 
+  async function handleMoveToBin() {
+    if (!id || !business || !invoice) return
+    openConfirm({
+      title: 'Move Invoice to Bin',
+      message: `Move ${invoice.invoiceNumber} to the Recycle Bin? Stock and customer ledger entries will be reversed while in the bin.`,
+      variant: 'warning',
+      confirmLabel: 'Move to Bin',
+      onConfirm: async () => {
+        try {
+          await moveInvoiceToBin(id, business.id)
+          success('Moved to Bin', `Invoice ${invoice.invoiceNumber} moved to Recycle Bin.`)
+          const updated = await getInvoiceWithItems(id)
+          if (updated) setInvoice(updated)
+        } catch (err) {
+          error('Failed to move to bin', err instanceof Error ? err.message : 'Unknown error')
+        }
+      },
+    })
+  }
+
+  async function handleRestoreFromBin() {
+    if (!id || !business || !invoice) return
+    openConfirm({
+      title: 'Restore Invoice',
+      message: `Restore ${invoice.invoiceNumber} from the Recycle Bin? Stock deductions and customer balances will be reinstated.`,
+      variant: 'default',
+      confirmLabel: 'Restore Invoice',
+      onConfirm: async () => {
+        try {
+          await restoreInvoiceFromBin(id, business.id)
+          success('Restored', `Invoice ${invoice.invoiceNumber} has been restored.`)
+          const updated = await getInvoiceWithItems(id)
+          if (updated) setInvoice(updated)
+        } catch (err) {
+          error('Failed to restore invoice', err instanceof Error ? err.message : 'Unknown error')
+        }
+      },
+    })
+  }
+
+  async function handlePermanentlyDelete() {
+    if (!id || !business || !invoice) return
+    openConfirm({
+      title: 'Permanently Delete Invoice',
+      message: `Are you sure you want to permanently delete invoice ${invoice.invoiceNumber}? This cannot be undone.`,
+      variant: 'danger',
+      confirmLabel: 'Delete Permanently',
+      onConfirm: async () => {
+        try {
+          await permanentlyDeleteInvoice(id, business.id)
+          success('Permanently Deleted', `Invoice ${invoice.invoiceNumber} has been removed.`)
+          navigate('/invoices')
+        } catch (err) {
+          error('Failed to delete', err instanceof Error ? err.message : 'Unknown error')
+        }
+      },
+    })
+  }
+
+  async function handleSaveInvoiceNumber() {
+    if (!id || !business || !invoice) return
+    const trimmed = editNumberValue.trim()
+    if (!trimmed) {
+      setEditNumberError('Invoice number cannot be empty.')
+      return
+    }
+    if (trimmed === invoice.invoiceNumber) {
+      setShowEditNumberModal(false)
+      return
+    }
+    setIsUpdatingInvoiceNumber(true)
+    setEditNumberError('')
+    try {
+      await updateInvoiceNumber(id, business.id, trimmed)
+      success('Invoice Number Updated', `Changed to ${trimmed}`)
+      setShowEditNumberModal(false)
+      const updated = await getInvoiceWithItems(id)
+      if (updated) setInvoice(updated)
+    } catch (err) {
+      setEditNumberError(err instanceof Error ? err.message : 'Failed to update invoice number.')
+    } finally {
+      setIsUpdatingInvoiceNumber(false)
+    }
+  }
+
   if (isLoading) return <LoadingState fullHeight />
 
   const headerActions = (
     <div className="flex items-center gap-2">
       <Button variant="ghost" size="sm" leftIcon={<ArrowLeft size={14} />} onClick={() => navigate('/invoices')}>Back</Button>
-      {invoice && (
+      {invoice && invoice.isDeleted ? (
         <>
-          <Button variant="secondary" size="sm" isLoading={isGeneratingPDF} leftIcon={<Eye size={14} />} onClick={handlePreviewPDF}>Preview</Button>
-          <Button variant="secondary" size="sm" isLoading={isGeneratingPDF} leftIcon={<FileDown size={14} />} onClick={handleOpenPDF}>Open PDF</Button>
-          <Button variant="secondary" size="sm" isLoading={isGeneratingPDF} leftIcon={<Download size={14} />} onClick={handleDownloadPDF}>Download</Button>
-          <Button variant="secondary" size="sm" leftIcon={<Printer size={14} />} onClick={handlePrintPDF}>Print</Button>
-          <Button variant="secondary" size="sm" leftIcon={<MessageSquare size={14} />} onClick={handleWhatsApp}>WhatsApp</Button>
-          <Button variant="secondary" size="sm" leftIcon={<Copy size={14} />} onClick={handleDuplicate}>Duplicate</Button>
+          <Button variant="primary" size="sm" leftIcon={<RotateCcw size={14} />} onClick={handleRestoreFromBin}>
+            Restore Invoice
+          </Button>
+          <Button variant="danger" size="sm" leftIcon={<Trash2 size={14} />} onClick={handlePermanentlyDelete}>
+            Permanently Delete
+          </Button>
         </>
-      )}
-      {invoice && invoice.status !== 'DRAFT' && invoice.status !== 'CANCELLED' && invoice.paymentStatus !== 'PAID' && (
-        <Button
-          variant="primary"
-          size="sm"
-          leftIcon={<CreditCard size={14} />}
-          onClick={() => {
-            const remaining = Math.max(0, (invoice.totalAmount || 0) - (invoice.paidAmount || 0))
-            setPaymentAmountInput(paiseToRupees(remaining))
-            setPaymentDateInput(todayISO())
-            setShowPaymentModal(true)
-          }}
-        >
-          Record Payment
-        </Button>
-      )}
-      {invoice?.status === 'DRAFT' && (
+      ) : (
         <>
-          <Button variant="secondary" size="sm" isLoading={isSaving} leftIcon={<Save size={14} />} onClick={handleSaveDraft}>Save Draft</Button>
-          <Button variant="primary" size="sm" isLoading={isFinalizing} leftIcon={<CheckCircle2 size={14} />} onClick={handleFinalize}>Finalize & Deduct Stock</Button>
+          {invoice && (
+            <>
+              <Button variant="secondary" size="sm" isLoading={isGeneratingPDF} leftIcon={<Eye size={14} />} onClick={handlePreviewPDF}>Preview</Button>
+              <Button variant="secondary" size="sm" isLoading={isGeneratingPDF} leftIcon={<FileDown size={14} />} onClick={handleOpenPDF}>Open PDF</Button>
+              <Button variant="secondary" size="sm" isLoading={isGeneratingPDF} leftIcon={<Download size={14} />} onClick={handleDownloadPDF}>Download</Button>
+              <Button variant="secondary" size="sm" leftIcon={<Printer size={14} />} onClick={handlePrintPDF}>Print</Button>
+              <Button variant="secondary" size="sm" leftIcon={<MessageSquare size={14} />} onClick={handleWhatsApp}>WhatsApp</Button>
+              <Button variant="secondary" size="sm" leftIcon={<Copy size={14} />} onClick={handleDuplicate}>Duplicate</Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<Edit2 size={14} />}
+                onClick={() => {
+                  setEditNumberValue(invoice.invoiceNumber)
+                  setEditNumberError('')
+                  setShowEditNumberModal(true)
+                }}
+              >
+                Edit #
+              </Button>
+            </>
+          )}
+          {invoice && invoice.status !== 'DRAFT' && invoice.status !== 'CANCELLED' && invoice.paymentStatus !== 'PAID' && (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<CreditCard size={14} />}
+              onClick={() => {
+                const remaining = Math.max(0, (invoice.totalAmount || 0) - (invoice.paidAmount || 0))
+                setPaymentAmountInput(paiseToRupees(remaining))
+                setPaymentDateInput(todayISO())
+                setShowPaymentModal(true)
+              }}
+            >
+              Record Payment
+            </Button>
+          )}
+          {invoice?.status === 'DRAFT' && (
+            <>
+              <Button variant="secondary" size="sm" isLoading={isSaving} leftIcon={<Save size={14} />} onClick={handleSaveDraft}>Save Draft</Button>
+              <Button variant="primary" size="sm" isLoading={isFinalizing} leftIcon={<CheckCircle2 size={14} />} onClick={handleFinalize}>Finalize & Deduct Stock</Button>
+            </>
+          )}
+          {!id && (
+            <>
+              <Button variant="secondary" size="sm" isLoading={isSaving} leftIcon={<Save size={14} />} onClick={handleSaveDraft}>Save Draft</Button>
+              <Button variant="primary" size="sm" isLoading={isFinalizing} leftIcon={<CheckCircle2 size={14} />} onClick={handleSaveAndFinalize}>Generate & Finalize Invoice</Button>
+            </>
+          )}
+          {(invoice?.status === 'FINALIZED' || invoice?.status === 'PARTIALLY_PAID') && (
+            <Button variant="danger" size="sm" onClick={handleCancelInvoice}>Cancel Invoice</Button>
+          )}
+          {invoice && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              leftIcon={<Trash2 size={14} />}
+              onClick={handleMoveToBin}
+            >
+              Move to Bin
+            </Button>
+          )}
         </>
-      )}
-      {!id && (
-        <>
-          <Button variant="secondary" size="sm" isLoading={isSaving} leftIcon={<Save size={14} />} onClick={handleSaveDraft}>Save Draft</Button>
-          <Button variant="primary" size="sm" isLoading={isFinalizing} leftIcon={<CheckCircle2 size={14} />} onClick={handleSaveAndFinalize}>Generate & Finalize Invoice</Button>
-        </>
-      )}
-      {(invoice?.status === 'FINALIZED' || invoice?.status === 'PARTIALLY_PAID') && (
-        <Button variant="danger" size="sm" onClick={handleCancelInvoice}>Cancel Invoice</Button>
       )}
     </div>
   )
@@ -653,10 +784,55 @@ export default function InvoiceEditor() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={id ? (invoice?.invoiceNumber ?? 'Invoice') : 'New Invoice'}
+        title={
+          <div className="flex items-center gap-2">
+            <span className={invoice?.isDeleted ? 'line-through text-gray-400' : ''}>
+              {id ? (invoice?.invoiceNumber ?? 'Invoice') : 'New Invoice'}
+            </span>
+            {invoice && !invoice.isDeleted && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditNumberValue(invoice.invoiceNumber)
+                  setEditNumberError('')
+                  setShowEditNumberModal(true)
+                }}
+                className="p-1 text-gray-400 hover:text-orion-primary rounded hover:bg-gray-100 transition-colors"
+                title="Change Invoice Number"
+              >
+                <Edit2 size={15} />
+              </button>
+            )}
+            {invoice?.isDeleted && (
+              <span className="text-xs bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full no-underline">
+                In Recycle Bin
+              </span>
+            )}
+          </div>
+        }
         breadcrumb={[{ label: 'Invoices' }, { label: id ? (invoice?.invoiceNumber ?? 'Invoice') : 'New' }]}
         actions={headerActions}
       />
+
+      {invoice?.isDeleted && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3 text-red-800">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">This invoice is in the Recycle Bin</p>
+              <p className="text-xs text-red-700">Stock deductions and customer ledger balance are temporarily reversed. You can restore this invoice or permanently delete it.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" leftIcon={<RotateCcw size={14} />} onClick={handleRestoreFromBin}>
+              Restore Invoice
+            </Button>
+            <Button variant="danger" size="sm" leftIcon={<Trash2 size={14} />} onClick={handlePermanentlyDelete}>
+              Permanently Delete
+            </Button>
+          </div>
+        </div>
+      )}
 
       {invoice && invoice.status !== 'DRAFT' && (
         <div className="flex items-center gap-2">
@@ -1362,6 +1538,79 @@ export default function InvoiceEditor() {
                   placeholder="e.g. Received via GPay from customer"
                 />
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Invoice Number Modal */}
+      {showEditNumberModal && invoice && (
+        <Modal
+          isOpen={showEditNumberModal}
+          onClose={() => setShowEditNumberModal(false)}
+          title="Change Invoice Number"
+          size="md"
+          footer={
+            <div className="flex justify-end gap-2 w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEditNumberModal(false)}
+                disabled={isUpdatingInvoiceNumber}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={isUpdatingInvoiceNumber}
+                onClick={handleSaveInvoiceNumber}
+              >
+                Save Invoice Number
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-gray-600">
+              Updating the invoice number will automatically synchronize all associated customer ledger entries, inventory stock deduction records, and audit events.
+            </p>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Current Invoice Number
+              </label>
+              <div className="font-mono text-sm bg-gray-50 border border-gray-200 px-3 py-2 rounded text-gray-700">
+                {invoice.invoiceNumber}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                New Invoice Number *
+              </label>
+              <Input
+                value={editNumberValue}
+                onChange={(e) => {
+                  setEditNumberValue(e.target.value)
+                  setEditNumberError('')
+                }}
+                placeholder="e.g. INV-2026-0042"
+                autoFocus
+              />
+              {editNumberError && (
+                <p className="mt-1.5 text-xs text-red-600 font-medium">
+                  {editNumberError}
+                </p>
+              )}
+            </div>
+
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 space-y-1">
+              <p className="font-semibold">Important Notes:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>The new number must be unique across all invoices in your business.</li>
+                <li>Invoice dates, totals, taxes, and products will remain unchanged.</li>
+              </ul>
             </div>
           </div>
         </Modal>
