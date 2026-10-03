@@ -220,13 +220,21 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
   }
 
   // A4 / A5 Layout with Continuous Unbroken Grid Lines
-  const containerClass = paperSize === 'A5' ? 'max-w-2xl text-[11px]' : 'max-w-4xl text-xs'
+  const fontScale = design.fontScale || 'normal'
+  const fontScaleContainerClass =
+    fontScale === 'xlarge'
+      ? (paperSize === 'A5' ? 'text-xs sm:text-[13px]' : 'text-sm sm:text-base')
+      : fontScale === 'large'
+      ? (paperSize === 'A5' ? 'text-[11px] sm:text-xs' : 'text-[13px] sm:text-sm')
+      : (paperSize === 'A5' ? 'text-[11px]' : 'text-xs sm:text-[13px]')
+
+  const containerClass = paperSize === 'A5' ? `max-w-2xl ${fontScaleContainerClass}` : `max-w-4xl ${fontScaleContainerClass}`
   const densityPadding =
     design.tableDensity === 'compact'
-      ? 'py-1 px-2'
+      ? 'py-1.5 px-2'
       : design.tableDensity === 'spacious'
-      ? 'py-3 px-3.5'
-      : 'py-2 px-3'
+      ? 'py-3.5 px-3.5'
+      : 'py-2.5 px-3'
 
   // Brand Header Logo Renderer (ONLY renders when logoUrl exists, NO basic pre-added placeholder emblem)
   const renderLogo = () => {
@@ -804,6 +812,116 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
                     {cols.totalAmt && (
                       <td className={`${densityPadding} text-right tabular-nums font-bold text-gray-900`}>
                         ₹ {paiseToRupees(item.totalAmount)}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+
+              {/* Blank Padding Rows for Full Bill Layout */}
+              {Array.from({ length: Math.max(0, (design.minTableRows ?? 8) - invoice.items.length) }).map((_, bIdx) => {
+                const isZebra = (invoice.items.length + bIdx) % 2 === 1 && design.zebraStriping
+                return (
+                  <tr
+                    key={`blank-row-${bIdx}`}
+                    className={`h-7 sm:h-8 ${isZebra ? 'bg-gray-50/70' : 'bg-white'}`}
+                    style={{
+                      borderBottom: showRowDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                    }}
+                  >
+                    {cols.sr && (
+                      <td
+                        className={`${densityPadding} text-center select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.desc && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.hsn && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.qty && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.unit && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.price && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.taxable && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.gstPct && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.gstAmt && (
+                      <td
+                        className={`${densityPadding} select-none text-transparent`}
+                        style={{
+                          borderRight: showColDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
+                        }}
+                      >
+                        &nbsp;
+                      </td>
+                    )}
+                    {cols.totalAmt && (
+                      <td className={`${densityPadding} select-none text-transparent`}>
+                        &nbsp;
                       </td>
                     )}
                   </tr>

@@ -24,6 +24,7 @@ export interface ColumnVisibilityMap {
 }
 
 export type PageAlignmentStyle = 'center' | 'left' | 'right'
+export type FontScaleStyle = 'normal' | 'large' | 'xlarge'
 
 export interface InvoiceCustomDesign {
   // 1. Grid & Lines
@@ -35,6 +36,8 @@ export interface InvoiceCustomDesign {
   zebraStriping: boolean
   columnsVisibility: ColumnVisibilityMap
   unifiedGrid: boolean         // Continuous seamless unbroken frame (zero cuts/gaps)
+  minTableRows: number         // 0 to 15 (default 8: pads single-product invoices with blank rows & column grid lines)
+  fontScale: FontScaleStyle    // 'normal' | 'large' | 'xlarge' (adjusts overall print text size for maximum readability)
 
   // 2. Header & Brand Logo
   headerLayout: HeaderLayoutStyle
@@ -130,6 +133,8 @@ export const DEFAULT_INVOICE_DESIGN: InvoiceCustomDesign = {
   zebraStriping: false,
   columnsVisibility: DEFAULT_COLUMNS_VISIBILITY,
   unifiedGrid: true, // Continuous unbroken frame with zero cuts/gaps
+  minTableRows: 8, // Pads single product bills with 7 empty rows and full column grid lines
+  fontScale: 'normal',
 
   // Header & Logo (Brand name strong and big, no pre-added placeholder logo)
   headerLayout: 'classic',

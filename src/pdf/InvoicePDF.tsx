@@ -233,20 +233,34 @@ export function InvoicePDF({
   const isLargeVMargin = verticalMarginTotal >= 35
   const isExtremeVMargin = verticalMarginTotal >= 65
 
-  const fontSizeBase = isA5
-    ? (isExtremeVMargin ? 5.8 : isLargeVMargin ? 6.1 : 6.5)
-    : (isExtremeVMargin ? 6.4 : isLargeVMargin ? 6.8 : 7.2)
+  const fontScaleMult =
+    design.fontScale === 'xlarge'
+      ? 1.25
+      : design.fontScale === 'large'
+      ? 1.12
+      : 1.0
+
+  const fontSizeBase = (
+    isA5
+      ? (isExtremeVMargin ? 6.5 : isLargeVMargin ? 7.0 : 7.6)
+      : (isExtremeVMargin ? 7.4 : isLargeVMargin ? 8.0 : 8.5)
+  ) * fontScaleMult
 
   // Density padding
   const densityPadV = isExtremeVMargin
-    ? 1.5
+    ? 2.0
     : isLargeVMargin
-    ? 2.2
-    : (design.tableDensity === 'compact' ? 2 : design.tableDensity === 'spacious' ? 4.5 : 3.2)
+    ? 2.8
+    : (design.tableDensity === 'compact' ? 2.5 : design.tableDensity === 'spacious' ? 5.5 : 4.0)
 
-  const brandHeadingFontSize = isA5
-    ? Math.max(14, (design.brandFontSize || 22) * 0.75)
-    : Math.max(18, design.brandFontSize || 22)
+  const brandHeadingFontSize = (
+    isA5
+      ? Math.max(14, (design.brandFontSize || 22) * 0.75)
+      : Math.max(18, design.brandFontSize || 22)
+  ) * fontScaleMult
+
+  const amountRowFontSize = (isA5 ? 6.6 : (isExtremeVMargin ? 7.2 : 8.2)) * fontScaleMult
+  const amountTotalFontSize = (isA5 ? 9.5 : (isExtremeVMargin ? 10.5 : 12.0)) * fontScaleMult
 
   const styles = StyleSheet.create({
     page: {
@@ -281,17 +295,17 @@ export function InvoicePDF({
       textTransform: 'uppercase',
     },
     businessLegalName: {
-      fontSize: isA5 ? 7 : 8,
+      fontSize: (isA5 ? 7.5 : 9.5) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
     },
     businessAddressLine: {
-      fontSize: isA5 ? 5.5 : 6.2,
+      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
       color: '#475569',
       marginTop: 0.5,
     },
     businessMetaLine: {
-      fontSize: isA5 ? 5.5 : 6.2,
+      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
       color: '#475569',
       marginTop: 0.5,
     },
@@ -312,7 +326,7 @@ export function InvoicePDF({
       borderRightColor: activeTheme.border,
     },
     bannerTitleText: {
-      fontSize: isA5 ? 12 : 15,
+      fontSize: (isA5 ? 13 : 16) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.primary,
       letterSpacing: 2,
@@ -332,14 +346,14 @@ export function InvoicePDF({
     },
     metaLabel: {
       width: '45%',
-      fontSize: isA5 ? 5.2 : (isExtremeVMargin ? 5.6 : 6.5),
+      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 8.0)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
     },
     metaVal: {
       width: '55%',
       textAlign: 'right',
-      fontSize: isA5 ? 5.2 : (isExtremeVMargin ? 5.6 : 6.5),
+      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 8.0)) * fontScaleMult,
       color: activeTheme.textDark,
     },
 
@@ -358,7 +372,7 @@ export function InvoicePDF({
       borderBottomColor: activeTheme.border,
     },
     colHeaderText: {
-      fontSize: isA5 ? 5.6 : (isExtremeVMargin ? 5.8 : 6.5),
+      fontSize: (isA5 ? 6.8 : (isExtremeVMargin ? 7.2 : 8.5)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#ffffff',
     },
@@ -367,15 +381,15 @@ export function InvoicePDF({
       minHeight: isA5 ? 46 : (isExtremeVMargin ? 48 : (isLargeVMargin ? 54 : 62)),
     },
     partyName: {
-      fontSize: isA5 ? 6.5 : (isExtremeVMargin ? 6.8 : 7.5),
+      fontSize: (isA5 ? 8.0 : (isExtremeVMargin ? 8.5 : 10.0)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
       marginBottom: 1,
     },
     partyLine: {
-      fontSize: isA5 ? 5.2 : (isExtremeVMargin ? 5.5 : 6.2),
+      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 7.8)) * fontScaleMult,
       color: '#475569',
-      lineHeight: 1.22,
+      lineHeight: 1.25,
     },
     infoRow: {
       flexDirection: 'row',
@@ -385,12 +399,12 @@ export function InvoicePDF({
     },
     infoLabel: {
       width: '45%',
-      fontSize: isA5 ? 5.2 : (isExtremeVMargin ? 5.4 : 6.2),
+      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 7.8)) * fontScaleMult,
       color: '#64748B',
     },
     infoVal: {
       width: '55%',
-      fontSize: isA5 ? 5.2 : (isExtremeVMargin ? 5.4 : 6.2),
+      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 7.8)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
       textAlign: 'right',
@@ -411,11 +425,11 @@ export function InvoicePDF({
     thCell: {
       borderRightWidth: showColDividers ? borderWidthNum : 0,
       borderRightColor: activeTheme.border,
-      paddingVertical: isA5 ? 2.5 : 3.5,
+      paddingVertical: isA5 ? 2.8 : 3.8,
       paddingHorizontal: 2,
     },
     thText: {
-      fontSize: isA5 ? 5.5 : 6.2,
+      fontSize: (isA5 ? 6.8 : 8.2) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#ffffff',
       textAlign: 'center',
@@ -433,11 +447,11 @@ export function InvoicePDF({
       paddingHorizontal: 2.5,
     },
     tdText: {
-      fontSize: isA5 ? 5.5 : 6.2,
+      fontSize: (isA5 ? 6.8 : 8.2) * fontScaleMult,
       color: activeTheme.textDark,
     },
     tdTextBold: {
-      fontSize: isA5 ? 5.5 : 6.2,
+      fontSize: (isA5 ? 7.0 : 8.5) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
     },
@@ -448,7 +462,7 @@ export function InvoicePDF({
       backgroundColor: activeTheme.totalRowBg,
       borderTopWidth: borderWidthNum,
       borderTopColor: activeTheme.border,
-      paddingVertical: isA5 ? 2.5 : 3.5,
+      paddingVertical: isA5 ? 2.8 : 3.8,
       alignItems: 'center',
     },
 
@@ -470,7 +484,7 @@ export function InvoicePDF({
       minHeight: isExtremeVMargin ? 24 : (isLargeVMargin ? 32 : (isA5 ? 38 : 46)),
     },
     wordsText: {
-      fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8),
+      fontSize: (isA5 ? 7.0 : (isExtremeVMargin ? 7.4 : 8.5)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
       lineHeight: 1.25,
@@ -495,7 +509,7 @@ export function InvoicePDF({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: isExtremeVMargin ? 1.2 : (isLargeVMargin ? 1.6 : 2),
+      paddingVertical: isExtremeVMargin ? 1.4 : (isLargeVMargin ? 1.8 : 2.4),
       paddingHorizontal: 4,
       borderTopWidth: borderWidthNum,
       borderTopColor: activeTheme.border,
@@ -556,7 +570,7 @@ export function InvoicePDF({
       marginTop: 2,
     },
     upiPillText: {
-      fontSize: 4.2,
+      fontSize: 4.8 * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#ffffff',
       textAlign: 'center',
@@ -565,7 +579,7 @@ export function InvoicePDF({
       flex: 1,
     },
     bankDetailRow: {
-      fontSize: isA5 ? 5.2 : 5.8,
+      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
       color: activeTheme.textDark,
       lineHeight: 1.25,
       marginBottom: 0.8,
@@ -575,7 +589,7 @@ export function InvoicePDF({
       backgroundColor: '#ffffff',
     },
     termsItem: {
-      fontSize: isA5 ? (design.termsFontSize || 6) * 0.85 : design.termsFontSize || 6,
+      fontSize: (isA5 ? (design.termsFontSize || 6.5) * 0.9 : (design.termsFontSize || 7.2)) * fontScaleMult,
       color: '#475569',
       lineHeight: 1.25,
       marginBottom: 1.5,
@@ -588,7 +602,7 @@ export function InvoicePDF({
       minHeight: isExtremeVMargin ? 36 : (isLargeVMargin ? 46 : (isA5 ? 54 : 64)),
     },
     signatoryFor: {
-      fontSize: isA5 ? 6 : 6.8,
+      fontSize: (isA5 ? 7.2 : 8.8) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
       textAlign: 'center',
@@ -607,9 +621,9 @@ export function InvoicePDF({
       alignItems: 'center',
     },
     signatoryLabel: {
-      fontSize: isA5 ? 5.5 : 6.2,
+      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
-      color: activeTheme.textDark,
+      color: '#64748B',
       textAlign: 'center',
     },
   })
@@ -1002,6 +1016,78 @@ export function InvoicePDF({
               )
             })}
 
+            {/* Blank Padding Rows for Full Bill Layout & In-Hand Quality */}
+            {(() => {
+              const minTableRows = typeof design.minTableRows === 'number' ? design.minTableRows : 8
+              const blankRowsCount = Math.max(0, minTableRows - invoice.items.length)
+              const blankRowHeight = (isA5 ? 15 : 20) * fontScaleMult
+
+              return Array.from({ length: blankRowsCount }).map((_, bIdx) => {
+                const isZebra = (invoice.items.length + bIdx) % 2 === 1 && design.zebraStriping
+                return (
+                  <View
+                    key={`blank-row-${bIdx}`}
+                    style={[
+                      styles.tableRow,
+                      { minHeight: blankRowHeight },
+                      isZebra ? { backgroundColor: '#F8FAFC' } : { backgroundColor: '#ffffff' },
+                    ]}
+                  >
+                    {cols.sr && (
+                      <View style={[{ width: colWidths.sr }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.desc && (
+                      <View style={[{ width: colWidths.desc }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.hsn && (
+                      <View style={[{ width: colWidths.hsn }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.qty && (
+                      <View style={[{ width: colWidths.qty }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.unit && (
+                      <View style={[{ width: colWidths.unit }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.price && (
+                      <View style={[{ width: colWidths.price }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.taxable && (
+                      <View style={[{ width: colWidths.taxable }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.gstPct && (
+                      <View style={[{ width: colWidths.gstPct }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.gstAmt && (
+                      <View style={[{ width: colWidths.gstAmt }, styles.tdCell]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                    {cols.totalAmt && (
+                      <View style={[{ width: colWidths.totalAmt }, styles.tdCell, { borderRightWidth: 0 }]}>
+                        <Text style={[styles.tdText, { opacity: 0 }]}> </Text>
+                      </View>
+                    )}
+                  </View>
+                )
+              })
+            })()}
+
             {/* Total Row */}
             <View style={styles.totalRow}>
               {/* Calculate leading span width before qty */}
@@ -1012,7 +1098,7 @@ export function InvoicePDF({
                 if (cols.hsn) leadingWidthPct += parseFloat(colWidths.hsn)
                 return (
                   <View style={[{ width: `${leadingWidthPct.toFixed(2)}%`, paddingLeft: 4 }, styles.tdCell]}>
-                    <Text style={{ fontSize: isA5 ? 6 : 6.8, fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>
+                    <Text style={{ fontSize: (isA5 ? 7.2 : 9.0) * fontScaleMult, fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>
                       Total
                     </Text>
                   </View>
@@ -1075,48 +1161,48 @@ export function InvoicePDF({
               </View>
               <View style={styles.amountsBody}>
                 <View style={styles.amountLine}>
-                  <Text style={{ width: '54%', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#475569' }}>Sub Total</Text>
-                  <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: activeTheme.textDark }}>{formatPDFCurrency(invoice.subtotal)}</Text>
+                  <Text style={{ width: '54%', fontSize: amountRowFontSize, color: '#475569' }}>Sub Total</Text>
+                  <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, color: activeTheme.textDark }}>{formatPDFCurrency(invoice.subtotal)}</Text>
                 </View>
                 {invoice.discountAmount > 0 && (
                   <View style={styles.amountLine}>
-                    <Text style={{ width: '54%', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#475569' }}>Discount</Text>
-                    <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#DC2626' }}>
+                    <Text style={{ width: '54%', fontSize: amountRowFontSize, color: '#475569' }}>Discount</Text>
+                    <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, color: '#DC2626' }}>
                       - {formatPDFCurrency(invoice.discountAmount)}
                     </Text>
                   </View>
                 )}
                 {Number(invoice.shippingCharges || 0) > 0 && (
                   <View style={styles.amountLine}>
-                    <Text style={{ width: '54%', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#475569' }}>Freight / Transportation</Text>
-                    <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: activeTheme.textDark }}>+ {formatPDFCurrency(invoice.shippingCharges)}</Text>
+                    <Text style={{ width: '54%', fontSize: amountRowFontSize, color: '#475569' }}>Freight / Transportation</Text>
+                    <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, color: activeTheme.textDark }}>+ {formatPDFCurrency(invoice.shippingCharges)}</Text>
                   </View>
                 )}
                 {Number(invoice.additionalCharges || 0) !== 0 && (
                   <View style={styles.amountLine}>
-                    <Text style={{ width: '54%', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#475569' }}>{invoice.additionalChargesLabel || 'Other Charges'}</Text>
-                    <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: activeTheme.textDark }}>
+                    <Text style={{ width: '54%', fontSize: amountRowFontSize, color: '#475569' }}>{invoice.additionalChargesLabel || 'Other Charges'}</Text>
+                    <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, color: activeTheme.textDark }}>
                       {invoice.additionalCharges > 0 ? '+ ' : ''}{formatPDFCurrency(invoice.additionalCharges)}
                     </Text>
                   </View>
                 )}
                 {invoice.roundOff !== 0 && (
                   <View style={styles.amountLine}>
-                    <Text style={{ width: '54%', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#475569' }}>Round Off</Text>
-                    <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: activeTheme.textDark }}>{formatPDFCurrency(invoice.roundOff)}</Text>
+                    <Text style={{ width: '54%', fontSize: amountRowFontSize, color: '#475569' }}>Round Off</Text>
+                    <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, color: activeTheme.textDark }}>{formatPDFCurrency(invoice.roundOff)}</Text>
                   </View>
                 )}
                 <View style={styles.amountLineTotal}>
-                  <Text style={{ width: '54%', fontSize: isA5 ? 6.2 : (isExtremeVMargin ? 6.6 : 7.2), fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>Total</Text>
-                  <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 6.2 : (isExtremeVMargin ? 6.6 : 7.2), fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>{formatPDFCurrency(invoice.totalAmount)}</Text>
+                  <Text style={{ width: '54%', fontSize: amountTotalFontSize, fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>Total</Text>
+                  <Text style={{ width: '46%', textAlign: 'right', fontSize: amountTotalFontSize, fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>{formatPDFCurrency(invoice.totalAmount)}</Text>
                 </View>
                 <View style={styles.amountLine}>
-                  <Text style={{ width: '54%', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: '#475569' }}>Received</Text>
-                  <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 5.8 : (isExtremeVMargin ? 6 : 6.8), color: activeTheme.textDark }}>{formatPDFCurrency(paid)}</Text>
+                  <Text style={{ width: '54%', fontSize: amountRowFontSize, color: '#475569' }}>Received</Text>
+                  <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, color: activeTheme.textDark }}>{formatPDFCurrency(paid)}</Text>
                 </View>
                 <View style={[styles.amountLine, { borderBottomWidth: 0 }]}>
-                  <Text style={{ width: '54%', fontSize: isA5 ? 6.2 : (isExtremeVMargin ? 6.6 : 7.2), fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>Balance</Text>
-                  <Text style={{ width: '46%', textAlign: 'right', fontSize: isA5 ? 6.2 : (isExtremeVMargin ? 6.6 : 7.2), fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>{formatPDFCurrency(balance)}</Text>
+                  <Text style={{ width: '54%', fontSize: amountRowFontSize, fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>Balance</Text>
+                  <Text style={{ width: '46%', textAlign: 'right', fontSize: amountRowFontSize, fontFamily: 'Helvetica-Bold', color: activeTheme.textDark }}>{formatPDFCurrency(balance)}</Text>
                 </View>
               </View>
             </View>

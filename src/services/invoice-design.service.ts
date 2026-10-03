@@ -23,6 +23,8 @@ export async function getInvoiceDesignConfig(): Promise<InvoiceCustomDesign> {
       marginLeft: typeof parsed.marginLeft === 'number' ? parsed.marginLeft : DEFAULT_INVOICE_DESIGN.marginLeft,
       marginRight: typeof parsed.marginRight === 'number' ? parsed.marginRight : DEFAULT_INVOICE_DESIGN.marginRight,
       unifiedGrid: typeof parsed.unifiedGrid === 'boolean' ? parsed.unifiedGrid : true,
+      minTableRows: typeof parsed.minTableRows === 'number' ? parsed.minTableRows : DEFAULT_INVOICE_DESIGN.minTableRows,
+      fontScale: parsed.fontScale || DEFAULT_INVOICE_DESIGN.fontScale,
       brandFontSize: typeof parsed.brandFontSize === 'number' && parsed.brandFontSize >= 14 ? parsed.brandFontSize : DEFAULT_INVOICE_DESIGN.brandFontSize,
       columnsVisibility: {
         ...DEFAULT_INVOICE_DESIGN.columnsVisibility,

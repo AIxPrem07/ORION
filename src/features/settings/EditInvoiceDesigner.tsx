@@ -641,11 +641,131 @@ export default function EditInvoiceDesigner() {
                   />
                 </div>
 
+                {/* Minimum Table Rows / Blank Rows Padding */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
+                      Minimum Table Rows (Blank Rows)
+                    </label>
+                    <span className="text-xs font-mono text-indigo-600 font-bold">
+                      {design.minTableRows ?? 8} rows
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-2">
+                    Draws empty rows with vertical column dividers when an invoice has fewer items, ensuring single-product bills look full, weighty, and balanced in-hand.
+                  </p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[
+                      { val: 0, label: 'Dynamic (0)' },
+                      { val: 5, label: '5 Rows' },
+                      { val: 8, label: '8 Rows (Std)' },
+                      { val: 10, label: '10 Rows' },
+                      { val: 12, label: '12 Rows (Tall)' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => updateDesign('minTableRows', opt.val)}
+                        className={`py-1.5 px-1 text-[11px] rounded border text-center transition-all ${
+                          (design.minTableRows ?? 8) === opt.val
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Print Font & Text Size Scale */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
+                      Print Text Size & Readability
+                    </label>
+                    <span className="text-xs font-semibold text-indigo-600 uppercase">
+                      {design.fontScale || 'normal'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-2">
+                    Controls font size on printed bills across item names, rates, GST columns, customer details, and totals.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'normal', label: 'Standard', desc: 'Crisp 8.5pt' },
+                      { id: 'large', label: 'Large (Bold)', desc: '+15% Bigger' },
+                      { id: 'xlarge', label: 'Extra Large', desc: 'Maximum Clarity' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => updateDesign('fontScale', f.id as any)}
+                        className={`p-2 rounded border text-left text-xs transition-all ${
+                          (design.fontScale || 'normal') === f.id
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <p className="font-semibold text-xs">{f.label}</p>
+                        <p className="text-[10px] text-gray-500">{f.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Columns Visibility Selector */}
                 <div>
-                  <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                    Visible Columns in Table
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-semibold text-gray-700">
+                      Visible Columns in Table
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateDesign('columnsVisibility', {
+                            sr: true,
+                            desc: true,
+                            hsn: true,
+                            qty: true,
+                            unit: true,
+                            price: true,
+                            taxable: true,
+                            gstPct: true,
+                            gstAmt: true,
+                            totalAmt: true,
+                          })
+                        }}
+                        className="text-[10px] text-indigo-600 hover:underline font-semibold"
+                        title="Show all 10 columns"
+                      >
+                        All 10 Cols
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateDesign('columnsVisibility', {
+                            sr: true,
+                            desc: true,
+                            hsn: true,
+                            qty: true,
+                            unit: false,
+                            price: true,
+                            taxable: false,
+                            gstPct: true,
+                            gstAmt: false,
+                            totalAmt: true,
+                          })
+                        }}
+                        className="text-[10px] text-indigo-600 hover:underline font-semibold"
+                        title="Standard GST 6 columns"
+                      >
+                        Standard GST
+                      </button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {[
                       { key: 'sr', label: '# (Serial Number)' },
