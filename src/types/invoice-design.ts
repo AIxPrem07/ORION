@@ -7,6 +7,7 @@ export type LogoPositionStyle = 'left' | 'center' | 'right' | 'hidden'
 export type LogoShapeStyle = 'square' | 'rounded' | 'circle'
 export type TableDensityStyle = 'compact' | 'normal' | 'spacious'
 export type BorderGridStyle = 'solid' | 'framed' | 'minimal'
+export type ProductLinesModeStyle = 'all' | 'clean_box' | 'none'
 export type BottomBlocksLayout = 'standard' | 'stacked' | 'terms_left'
 export type SignatureStyle = 'digital_wave' | 'uploaded' | 'blank_line'
 
@@ -30,6 +31,7 @@ export interface InvoiceCustomDesign {
   // 1. Grid & Lines
   showColumnDividers: boolean
   showRowDividers: boolean
+  productLinesMode?: ProductLinesModeStyle // 'all' (solid lines) | 'clean_box' (no inner row lines in products) | 'none' (borderless list)
   borderWidth: number          // in pt/px (0.5, 1, 1.5, 2)
   borderStyle: BorderGridStyle
   tableDensity: TableDensityStyle
@@ -127,6 +129,7 @@ export const DEFAULT_INVOICE_DESIGN: InvoiceCustomDesign = {
   // Grid & Lines
   showColumnDividers: true,
   showRowDividers: true,
+  productLinesMode: 'all',
   borderWidth: 1,
   borderStyle: 'solid',
   tableDensity: 'normal',
@@ -139,7 +142,7 @@ export const DEFAULT_INVOICE_DESIGN: InvoiceCustomDesign = {
   // Header & Logo (Brand name strong and big, no pre-added placeholder logo)
   headerLayout: 'classic',
   headerHeight: 'normal',
-  brandFontSize: 22,
+  brandFontSize: 24,
   brandTitle: '',
   showBrandSubtitle: false,
   brandSubtitle: 'Statutory GST Tax Invoice',
@@ -177,7 +180,7 @@ export const DEFAULT_INVOICE_DESIGN: InvoiceCustomDesign = {
 
   // Terms
   customTermsText: DEFAULT_TERMS_TEXT,
-  termsFontSize: 6,
+  termsFontSize: 8,
   jurisdictionCity: '',
 
   // Signature
@@ -186,12 +189,12 @@ export const DEFAULT_INVOICE_DESIGN: InvoiceCustomDesign = {
   signatureStyle: 'digital_wave',
   uploadedSignatureUrl: null,
 
-  // Theme & Colors
+  // Theme & Colors - Crisp, high-contrast, solid dark borders
   themePreset: 'SLATE_BLUE',
-  primaryColor: '#416788',
+  primaryColor: '#1E3A5F',
   bannerBgColor: '#EEF4FA',
-  textDarkColor: '#1E3A5F',
-  gridBorderColor: '#94A3B8',
+  textDarkColor: '#0F172A',
+  gridBorderColor: '#1E293B',
   totalRowBgColor: '#F1F5F9',
 
   // Margins & Page Positioning (in mm)

@@ -19,7 +19,7 @@ import { normalizeError } from '@utils/error'
 import { calculateInvoiceTotals } from './gst.service'
 import { getNextInvoiceNumber } from './invoice-number.service'
 import { recordStockMovement } from './inventory.service'
-import { createLedgerEntry } from './ledger.service'
+import { createLedgerEntry, recalculatePartyLedgerBalances } from './ledger.service'
 import { recordAuditEvent } from './audit.service'
 import { customerToSnapshot } from './customer.service'
 import type { Invoice, InvoiceWithItems, InvoiceItem, InvoiceFormData, InvoiceTotals } from '@/types/invoice'
@@ -545,19 +545,13 @@ export async function moveInvoiceToBin(
         }, tx)
       }
 
-      // Reverse customer ledger entry
+      // Remove customer ledger debit entry so Debit immediately drops and balances reflect accurately
       if (existing.customerId) {
-        await createLedgerEntry({
-          businessId,
-          entryDate: now.slice(0, 10),
-          partyType: 'CUSTOMER',
-          partyId: existing.customerId,
-          referenceType: 'INVOICE',
-          referenceId: invoiceId,
-          description: `Invoice ${existing.invoiceNumber} moved to Bin (Reversal)`,
-          debit: 0,
-          credit: existing.totalAmount,
-        }, tx)
+        await tx.execute(
+          `DELETE FROM ledger_entries WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`,
+          [businessId, invoiceId],
+        )
+        await recalculatePartyLedgerBalances(businessId, 'CUSTOMER', existing.customerId, tx)
       }
     }
   })
@@ -615,19 +609,20 @@ export async function restoreInvoiceFromBin(
         }, tx)
       }
 
-      // Re-create ledger debit
+      // Re-create ledger debit and recalculate running balance
       if (existing.customerId) {
         await createLedgerEntry({
           businessId,
-          entryDate: now.slice(0, 10),
+          entryDate: existing.invoiceDate,
           partyType: 'CUSTOMER',
           partyId: existing.customerId,
           referenceType: 'INVOICE',
           referenceId: invoiceId,
-          description: `Invoice ${existing.invoiceNumber} restored from Bin`,
+          description: `Invoice ${existing.invoiceNumber} — ${existing.customerSnapshot?.name || 'Customer'}`,
           debit: existing.totalAmount,
           credit: 0,
         }, tx)
+        await recalculatePartyLedgerBalances(businessId, 'CUSTOMER', existing.customerId, tx)
       }
     }
   })
@@ -654,8 +649,13 @@ export async function permanentlyDeleteInvoice(
   if (!existing) throw new Error('Invoice not found')
 
   await dbTransaction(async (tx) => {
+    await tx.execute(`DELETE FROM ledger_entries WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`, [businessId, invoiceId])
+    await tx.execute(`DELETE FROM stock_movements WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`, [businessId, invoiceId])
     await tx.execute(`DELETE FROM invoice_items WHERE invoice_id = ?`, [invoiceId])
     await tx.execute(`DELETE FROM invoices WHERE id = ? AND business_id = ?`, [invoiceId, businessId])
+    if (existing.customerId) {
+      await recalculatePartyLedgerBalances(businessId, 'CUSTOMER', existing.customerId, tx)
+    }
   })
 
   await recordAuditEvent({
@@ -683,8 +683,14 @@ export async function emptyInvoiceBin(
 
   await dbTransaction(async (tx) => {
     for (const inv of binned) {
+      const existingInv = await getInvoice(inv.id)
+      await tx.execute(`DELETE FROM ledger_entries WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`, [businessId, inv.id])
+      await tx.execute(`DELETE FROM stock_movements WHERE business_id = ? AND reference_type = 'INVOICE' AND reference_id = ?`, [businessId, inv.id])
       await tx.execute(`DELETE FROM invoice_items WHERE invoice_id = ?`, [inv.id])
       await tx.execute(`DELETE FROM invoices WHERE id = ? AND business_id = ?`, [inv.id, businessId])
+      if (existingInv?.customerId) {
+        await recalculatePartyLedgerBalances(businessId, 'CUSTOMER', existingInv.customerId, tx)
+      }
     }
   })
 
@@ -919,11 +925,11 @@ export async function getDashboardStats(businessId: string, dateFrom: string, da
          COALESCE(SUM(paid_amount), 0) as total_paid,
          COUNT(*) as invoice_count
        FROM invoices
-       WHERE business_id = ? AND invoice_date BETWEEN ? AND ? AND status != 'CANCELLED'`,
+       WHERE business_id = ? AND invoice_date BETWEEN ? AND ? AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0`,
       [businessId, dateFrom, dateTo],
     ),
     dbSelect<{ count: number }>(
-      `SELECT COUNT(*) as count FROM invoices WHERE business_id = ? AND invoice_date = date('now') AND status != 'CANCELLED'`,
+      `SELECT COUNT(*) as count FROM invoices WHERE business_id = ? AND invoice_date = date('now') AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0`,
       [businessId],
     ),
     dbSelect<{ outstanding: number; count: number }>(
@@ -931,7 +937,7 @@ export async function getDashboardStats(businessId: string, dateFrom: string, da
          COALESCE(SUM(total_amount - paid_amount), 0) as outstanding,
          COUNT(*) as count
        FROM invoices
-       WHERE business_id = ? AND payment_status IN ('UNPAID', 'PARTIALLY_PAID') AND status = 'FINALIZED'`,
+       WHERE business_id = ? AND payment_status IN ('UNPAID', 'PARTIALLY_PAID') AND status = 'FINALIZED' AND COALESCE(is_deleted, 0) = 0`,
       [businessId],
     ),
   ])

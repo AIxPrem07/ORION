@@ -453,7 +453,7 @@ export default function SetupWizard() {
         {/* Setup Wizard Footer */}
         <div className="bg-gray-50/80 px-8 py-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
           <span>&copy; 2026 ORION INC. All rights reserved.</span>
-          <span>ORION Setup Wizard &bull; Version 1.1 Pro</span>
+          <span>ORION Setup Wizard &bull; Version 1.2 Pro</span>
         </div>
       </div>
     </div>

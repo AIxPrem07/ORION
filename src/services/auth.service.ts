@@ -323,8 +323,8 @@ export async function listAllBusinessesWithOwners(): Promise<BusinessWithOwner[]
        u.email as owner_login_id,
        u.is_active as user_active,
        u.last_login_at as owner_last_login,
-       (SELECT COUNT(*) FROM invoices i WHERE i.business_id = b.id) as invoice_count,
-       (SELECT COALESCE(SUM(total_amount), 0) FROM invoices i WHERE i.business_id = b.id AND i.status != 'CANCELLED') as total_revenue
+       (SELECT COUNT(*) FROM invoices i WHERE i.business_id = b.id AND COALESCE(i.is_deleted, 0) = 0) as invoice_count,
+       (SELECT COALESCE(SUM(total_amount), 0) FROM invoices i WHERE i.business_id = b.id AND i.status != 'CANCELLED' AND COALESCE(i.is_deleted, 0) = 0) as total_revenue
      FROM business b
      LEFT JOIN users u ON u.business_id = b.id AND u.role = 'owner'
      WHERE b.id != 'biz_system_admin'

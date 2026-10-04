@@ -169,7 +169,7 @@ export async function getCustomerSummary(businessId: string, customerId: string)
          COUNT(*) as invoice_count,
          MAX(invoice_date) as last_date
        FROM invoices
-       WHERE business_id = ? AND customer_id = ? AND status != 'CANCELLED'`,
+       WHERE business_id = ? AND customer_id = ? AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0`,
       [businessId, customerId],
     ),
   ])

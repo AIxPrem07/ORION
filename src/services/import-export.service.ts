@@ -546,7 +546,7 @@ export async function exportInvoicesToCSV(businessId: string): Promise<string> {
             inv.status, inv.payment_status
      FROM invoices inv
      LEFT JOIN customers c ON inv.customer_id = c.id
-     WHERE inv.business_id = ?
+     WHERE inv.business_id = ? AND COALESCE(inv.is_deleted, 0) = 0
      ORDER BY inv.invoice_date DESC, inv.created_at DESC`,
     [businessId],
   )

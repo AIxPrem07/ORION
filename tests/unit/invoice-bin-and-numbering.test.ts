@@ -72,20 +72,62 @@ describe('ORION v1.1 — Recycle Bin & Invoice Numbering Suite', () => {
       ])
     })
 
-    it('verifies customer ledger reversal logic when moving finalized invoice to bin', () => {
-      const invoiceTotalAmount = 75000 // ₹750.00
-      const customerId = 'cust-1'
-
-      // Original invoice created debit entry: debit = totalAmount, credit = 0
-      // Binning creates reversal entry: debit = 0, credit = totalAmount
-      const ledgerReversal = {
-        partyId: customerId,
-        debit: 0,
-        credit: invoiceTotalAmount,
+    it('verifies customer ledger deletion and balance recalculation logic', () => {
+      // In ORION v1.2, deleting/binning an invoice removes the debit entry directly
+      // and recalculates chronological running balances, ensuring customer total debit drops immediately.
+      interface LedgerEntry {
+        id: string
+        debit: number
+        credit: number
+        balance: number
       }
 
-      expect(ledgerReversal.debit).toBe(0)
-      expect(ledgerReversal.credit).toBe(75000)
+      let entries: LedgerEntry[] = [
+        { id: 'entry-opening', debit: 10000, credit: 0, balance: 10000 },
+        { id: 'entry-inv-1', debit: 50000, credit: 0, balance: 60000 },
+        { id: 'entry-pay-1', debit: 0, credit: 20000, balance: 40000 },
+      ]
+
+      // Delete invoice inv-1
+      entries = entries.filter((e) => e.id !== 'entry-inv-1')
+
+      // Recalculate running balance
+      let running = 0
+      for (const e of entries) {
+        running += e.debit - e.credit
+        e.balance = running
+      }
+
+      const totalDebit = entries.reduce((s, e) => s + e.debit, 0)
+      const totalCredit = entries.reduce((s, e) => s + e.credit, 0)
+      const finalBalance = running
+
+      expect(totalDebit).toBe(10000) // Dropped from 60000 to 10000!
+      expect(totalCredit).toBe(20000)
+      expect(finalBalance).toBe(-10000) // 10000 - 20000 = -10000
+      expect(entries[entries.length - 1].balance).toBe(-10000)
+    })
+  })
+
+  describe('ORION v1.2 — Clean Box & Product Lines Mode', () => {
+    it('correctly maps productLinesMode clean_box to hide row lines while keeping col lines', () => {
+      const design = { productLinesMode: 'clean_box' as const, showRowDividers: true, showColumnDividers: true }
+      const showRowDividers = design.productLinesMode === 'clean_box' || design.productLinesMode === 'none' ? false : (design.showRowDividers !== false)
+      const showColDividers = design.productLinesMode === 'none' ? false : (design.showColumnDividers !== false)
+
+      expect(showRowDividers).toBe(false)
+      expect(showColDividers).toBe(true)
+    })
+
+    it('correctly maps productLinesMode all and none', () => {
+      const designAll = { productLinesMode: 'all' as const, showRowDividers: true, showColumnDividers: true }
+      expect(designAll.productLinesMode === 'clean_box' ? false : designAll.showRowDividers).toBe(true)
+
+      const designNone = { productLinesMode: 'none' as const, showRowDividers: true, showColumnDividers: true }
+      const showRowNone = designNone.productLinesMode === 'clean_box' || designNone.productLinesMode === 'none' ? false : true
+      const showColNone = designNone.productLinesMode === 'none' ? false : true
+      expect(showRowNone).toBe(false)
+      expect(showColNone).toBe(false)
     })
   })
 })

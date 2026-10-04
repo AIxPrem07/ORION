@@ -35,31 +35,31 @@ export const THEME_CONFIG: Record<
   }
 > = {
   SLATE_BLUE: {
-    primary: '#416788',
+    primary: '#1E3A5F',
     bannerBg: '#EEF4FA',
-    textDark: '#1E3A5F',
-    border: '#94A3B8',
+    textDark: '#0F172A',
+    border: '#1E293B',
     totalRowBg: '#F1F5F9',
   },
   CLASSIC_NAVY: {
     primary: '#1E3A5F',
     bannerBg: '#E9F0F8',
-    textDark: '#1E3A5F',
-    border: '#94A3B8',
+    textDark: '#0F172A',
+    border: '#0F172A',
     totalRowBg: '#F1F5F9',
   },
   MONOCHROME: {
-    primary: '#18191B',
+    primary: '#000000',
     bannerBg: '#F3F4F6',
-    textDark: '#111827',
-    border: '#6B7280',
+    textDark: '#000000',
+    border: '#000000',
     totalRowBg: '#F3F4F6',
   },
   EMERALD: {
-    primary: '#047857',
+    primary: '#064E3B',
     bannerBg: '#ECFDF5',
-    textDark: '#064E3B',
-    border: '#10B981',
+    textDark: '#022C22',
+    border: '#064E3B',
     totalRowBg: '#F0FDF4',
   },
 }
@@ -87,8 +87,9 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
   const gridBorderColor = design.gridBorderColor || activeTheme.border
   const totalRowBgColor = design.totalRowBgColor || activeTheme.totalRowBg
   const borderWidth = `${design.borderWidth || 1}px`
-  const showColDividers = design.showColumnDividers !== false
-  const showRowDividers = design.showRowDividers !== false
+  const productLinesMode = design.productLinesMode || (design.showRowDividers === false ? 'clean_box' : 'all')
+  const showRowDividers = productLinesMode === 'clean_box' || productLinesMode === 'none' ? false : (design.showRowDividers !== false)
+  const showColDividers = productLinesMode === 'none' ? false : (design.showColumnDividers !== false)
   const cols = design.columnsVisibility || DEFAULT_COLUMNS_VISIBILITY
   const colWidths = calculateColumnWidths(cols)
 
@@ -136,18 +137,18 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
   // Thermal 80mm layout
   if (paperSize === 'THERMAL') {
     return (
-      <div className="max-w-[340px] mx-auto bg-white border border-gray-400 p-4 text-gray-900 font-mono text-xs shadow-md">
-        <div className="text-center border-b border-dashed border-gray-400 pb-3 mb-2">
+      <div className="max-w-[340px] mx-auto bg-white border border-gray-900 p-4 text-gray-900 font-mono text-xs shadow-md">
+        <div className="text-center border-b border-gray-900 pb-3 mb-2">
           <h2 className="text-lg font-black uppercase tracking-tight">{design.brandTitle || business.name}</h2>
-          {business.address && <p className="text-[11px] text-gray-600">{business.address}</p>}
-          <p className="text-[11px] text-gray-600">
+          {business.address && <p className="text-[11px] text-gray-700">{business.address}</p>}
+          <p className="text-[11px] text-gray-700">
             {[business.city, business.state, business.pin].filter(Boolean).join(', ')}
           </p>
-          {business.phone && <p className="text-[11px] text-gray-600">Ph: {business.phone}</p>}
+          {business.phone && <p className="text-[11px] text-gray-700">Ph: {business.phone}</p>}
           {business.gstin && <p className="text-[11px] font-bold">GSTIN: {business.gstin}</p>}
         </div>
 
-        <div className="border-b border-dashed border-gray-400 pb-2 mb-2 text-[11px]">
+        <div className="border-b border-gray-900 pb-2 mb-2 text-[11px]">
           <p className="font-bold text-center">{design.bannerTitle || 'TAX INVOICE'}</p>
           <div className="flex justify-between">
             <span>Inv #: {invoice.invoiceNumber}</span>
@@ -156,9 +157,9 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
           <p>Customer: {customer?.name || 'Walk-in Customer'}</p>
         </div>
 
-        <table className="w-full text-[11px] border-b border-dashed border-gray-400 pb-2 mb-2">
+        <table className="w-full text-[11px] border-b border-gray-900 pb-2 mb-2">
           <thead>
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-gray-900">
               <th className="text-left py-1">Item</th>
               <th className="text-center py-1">Qty</th>
               <th className="text-right py-1">Rate</th>
@@ -168,7 +169,7 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
           <tbody>
             {invoice.items.map((it, idx) => (
               <tr key={it.id || idx}>
-                <td className="py-1">{it.description}</td>
+                <td className="py-1 font-semibold text-gray-950">{it.description}</td>
                 <td className="text-center py-1">{(it.quantity / 100).toFixed(0)}</td>
                 <td className="text-right py-1">{paiseToRupees(it.unitPrice)}</td>
                 <td className="text-right py-1 font-bold">{paiseToRupees(it.totalAmount)}</td>
@@ -177,7 +178,7 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
           </tbody>
         </table>
 
-        <div className="space-y-1 text-[11px] border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div className="space-y-1 text-[11px] border-b border-gray-900 pb-2 mb-2">
           <div className="flex justify-between">
             <span>Taxable Amount:</span>
             <span>₹ {paiseToRupees(invoice.taxableAmount)}</span>
@@ -223,18 +224,18 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
   const fontScale = design.fontScale || 'normal'
   const fontScaleContainerClass =
     fontScale === 'xlarge'
-      ? (paperSize === 'A5' ? 'text-xs sm:text-[13px]' : 'text-sm sm:text-base')
+      ? (paperSize === 'A5' ? 'text-xs sm:text-[14px]' : 'text-sm sm:text-[16px]')
       : fontScale === 'large'
-      ? (paperSize === 'A5' ? 'text-[11px] sm:text-xs' : 'text-[13px] sm:text-sm')
-      : (paperSize === 'A5' ? 'text-[11px]' : 'text-xs sm:text-[13px]')
+      ? (paperSize === 'A5' ? 'text-[12px] sm:text-xs' : 'text-[13.5px] sm:text-[15px]')
+      : (paperSize === 'A5' ? 'text-[11.5px]' : 'text-[13px] sm:text-[14px]')
 
   const containerClass = paperSize === 'A5' ? `max-w-2xl ${fontScaleContainerClass}` : `max-w-4xl ${fontScaleContainerClass}`
   const densityPadding =
     design.tableDensity === 'compact'
-      ? 'py-1.5 px-2'
+      ? 'py-2 px-2.5'
       : design.tableDensity === 'spacious'
-      ? 'py-3.5 px-3.5'
-      : 'py-2.5 px-3'
+      ? 'py-4 px-3.5'
+      : 'py-3 px-3'
 
   // Brand Header Logo Renderer (ONLY renders when logoUrl exists, NO basic pre-added placeholder emblem)
   const renderLogo = () => {

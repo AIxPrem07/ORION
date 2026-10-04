@@ -167,3 +167,58 @@ export async function getPartyBalance(
   )
   return rows[0]?.balance ?? 0
 }
+
+/**
+ * Recalculate running balances for all ledger entries of a specific party.
+ * Ensures that if any past entries are deleted or restored, every entry's
+ * running balance is 100% mathematically consistent.
+ */
+export async function recalculatePartyLedgerBalances(
+  businessId: string,
+  partyType: LedgerPartyType,
+  partyId: string,
+  tx?: { select: typeof dbSelect; execute: typeof dbExecute },
+): Promise<void> {
+  const executor = tx ?? { select: dbSelect, execute: dbExecute }
+  const entries = await executor.select<{ id: string; debit: number; credit: number }>(
+    `SELECT id, debit, credit FROM ledger_entries
+     WHERE business_id = ? AND party_type = ? AND party_id = ?
+     ORDER BY entry_date ASC, created_at ASC`,
+    [businessId, partyType, partyId],
+  )
+  let currentBalance = 0
+  for (const entry of entries) {
+    currentBalance = currentBalance + (entry.debit || 0) - (entry.credit || 0)
+    await executor.execute(
+      `UPDATE ledger_entries SET balance = ? WHERE id = ?`,
+      [currentBalance, entry.id],
+    )
+  }
+}
+
+/**
+ * Remove all ledger entries referencing a specific entity (e.g. deleted invoice)
+ * and recalculate the affected party's running balances.
+ */
+export async function removeLedgerEntriesForReference(
+  businessId: string,
+  referenceType: LedgerReferenceType,
+  referenceId: string,
+  tx?: { select: typeof dbSelect; execute: typeof dbExecute },
+): Promise<void> {
+  const executor = tx ?? { select: dbSelect, execute: dbExecute }
+  const affectedParties = await executor.select<{ party_type: LedgerPartyType; party_id: string }>(
+    `SELECT DISTINCT party_type, party_id FROM ledger_entries
+     WHERE business_id = ? AND reference_type = ? AND reference_id = ? AND party_type IS NOT NULL AND party_id IS NOT NULL`,
+    [businessId, referenceType, referenceId],
+  )
+
+  await executor.execute(
+    `DELETE FROM ledger_entries WHERE business_id = ? AND reference_type = ? AND reference_id = ?`,
+    [businessId, referenceType, referenceId],
+  )
+
+  for (const p of affectedParties) {
+    await recalculatePartyLedgerBalances(businessId, p.party_type, p.party_id, tx)
+  }
+}

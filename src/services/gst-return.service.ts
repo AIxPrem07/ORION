@@ -207,6 +207,7 @@ export async function fetchGSTDataForPeriod(
        AND invoice_date >= ?
        AND invoice_date <= ?
        AND status NOT IN ('DRAFT', 'CANCELLED')
+       AND COALESCE(is_deleted, 0) = 0
      ORDER BY invoice_date ASC, created_at ASC`,
     [businessId, startDate, endDate],
   )

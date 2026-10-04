@@ -548,6 +548,74 @@ export default function EditInvoiceDesigner() {
                   </p>
                 </div>
 
+                {/* Product Section Lines Style */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-semibold text-gray-700">Product Section Lines Style</label>
+                    <span className="text-xs font-semibold text-indigo-600">
+                      {(design.productLinesMode || (design.showRowDividers === false ? 'clean_box' : 'all')) === 'clean_box'
+                        ? 'Clean Box (No Inner Lines)'
+                        : (design.productLinesMode || 'all') === 'none'
+                        ? 'Borderless'
+                        : 'Solid Grid Lines'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-2">
+                    Select how product items are separated. Clean Box leaves the product area open and readable without broken/dotted lines while keeping the solid outer frame and headers intact.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      {
+                        id: 'all',
+                        label: 'Solid Grid',
+                        desc: 'Full row & col solid lines',
+                      },
+                      {
+                        id: 'clean_box',
+                        label: 'Clean Box',
+                        desc: 'No row lines in products',
+                      },
+                      {
+                        id: 'none',
+                        label: 'Borderless',
+                        desc: 'Open minimalist layout',
+                      },
+                    ].map((mode) => {
+                      const currentMode = design.productLinesMode || (design.showRowDividers === false ? 'clean_box' : 'all')
+                      const isSelected = currentMode === mode.id
+                      return (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => {
+                            if (mode.id === 'clean_box') {
+                              updateDesign('productLinesMode', 'clean_box')
+                              updateDesign('showRowDividers', false)
+                              updateDesign('showColumnDividers', true)
+                            } else if (mode.id === 'none') {
+                              updateDesign('productLinesMode', 'none')
+                              updateDesign('showRowDividers', false)
+                              updateDesign('showColumnDividers', false)
+                            } else {
+                              updateDesign('productLinesMode', 'all')
+                              updateDesign('showRowDividers', true)
+                              updateDesign('showColumnDividers', true)
+                            }
+                          }}
+                          className={`p-2 rounded border text-left text-xs transition-all ${
+                            isSelected
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold'
+                              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <p className="font-semibold text-xs">{mode.label}</p>
+                          <p className="text-[10px] text-gray-500">{mode.desc}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 {/* Line Dividers Toggles */}
                 <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-800">
@@ -693,9 +761,9 @@ export default function EditInvoiceDesigner() {
                   </p>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: 'normal', label: 'Standard', desc: 'Crisp 8.5pt' },
-                      { id: 'large', label: 'Large (Bold)', desc: '+15% Bigger' },
-                      { id: 'xlarge', label: 'Extra Large', desc: 'Maximum Clarity' },
+                      { id: 'normal', label: 'Standard', desc: 'Crisp 10.5pt (Clean)' },
+                      { id: 'large', label: 'Large (Bold)', desc: '+15% Bigger (No specs)' },
+                      { id: 'xlarge', label: 'Extra Large', desc: '13pt (Maximum Clarity)' },
                     ].map((f) => (
                       <button
                         key={f.id}

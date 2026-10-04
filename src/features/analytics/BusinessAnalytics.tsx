@@ -31,7 +31,7 @@ export default function BusinessAnalytics() {
              COALESCE(SUM(total_amount), 0) as total_sales,
              COALESCE(SUM(paid_amount), 0) as total_collected
            FROM invoices
-           WHERE business_id = ? AND status != 'CANCELLED'
+           WHERE business_id = ? AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0
              AND invoice_date BETWEEN ? AND ?
            GROUP BY month
            ORDER BY month ASC`,

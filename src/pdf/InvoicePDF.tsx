@@ -39,31 +39,31 @@ const THEME_COLORS: Record<
   }
 > = {
   SLATE_BLUE: {
-    primary: '#416788',
+    primary: '#1E3A5F',
     bannerBg: '#EEF4FA',
-    textDark: '#1E3A5F',
-    border: '#94A3B8',
+    textDark: '#0F172A',
+    border: '#1E293B',
     totalRowBg: '#F1F5F9',
   },
   CLASSIC_NAVY: {
-    primary: '#1E3A5F',
+    primary: '#0F172A',
     bannerBg: '#E9F0F8',
-    textDark: '#1E3A5F',
-    border: '#94A3B8',
+    textDark: '#0F172A',
+    border: '#0F172A',
     totalRowBg: '#F1F5F9',
   },
   MONOCHROME: {
-    primary: '#18191B',
+    primary: '#000000',
     bannerBg: '#F3F4F6',
-    textDark: '#111827',
-    border: '#6B7280',
+    textDark: '#000000',
+    border: '#000000',
     totalRowBg: '#F3F4F6',
   },
   EMERALD: {
-    primary: '#047857',
+    primary: '#064E3B',
     bannerBg: '#ECFDF5',
-    textDark: '#064E3B',
-    border: '#10B981',
+    textDark: '#022C22',
+    border: '#064E3B',
     totalRowBg: '#F0FDF4',
   },
 }
@@ -97,8 +97,9 @@ export function InvoicePDF({
   }
 
   const borderWidthNum = design.borderWidth || 1
-  const showColDividers = design.showColumnDividers !== false
-  const showRowDividers = design.showRowDividers !== false
+  const productLinesMode = design.productLinesMode || (design.showRowDividers === false ? 'clean_box' : 'all')
+  const showRowDividers = productLinesMode === 'clean_box' || productLinesMode === 'none' ? false : (design.showRowDividers !== false)
+  const showColDividers = productLinesMode === 'none' ? false : (design.showColumnDividers !== false)
   const cols = design.columnsVisibility || DEFAULT_COLUMNS_VISIBILITY
   const colWidths = calculateColumnWidths(cols)
 
@@ -235,32 +236,32 @@ export function InvoicePDF({
 
   const fontScaleMult =
     design.fontScale === 'xlarge'
-      ? 1.25
+      ? 1.35
       : design.fontScale === 'large'
-      ? 1.12
-      : 1.0
+      ? 1.20
+      : 1.10
 
   const fontSizeBase = (
     isA5
-      ? (isExtremeVMargin ? 6.5 : isLargeVMargin ? 7.0 : 7.6)
-      : (isExtremeVMargin ? 7.4 : isLargeVMargin ? 8.0 : 8.5)
+      ? (isExtremeVMargin ? 7.6 : isLargeVMargin ? 8.4 : 9.2)
+      : (isExtremeVMargin ? 8.6 : isLargeVMargin ? 9.6 : 10.5)
   ) * fontScaleMult
 
   // Density padding
   const densityPadV = isExtremeVMargin
-    ? 2.0
+    ? 2.5
     : isLargeVMargin
-    ? 2.8
-    : (design.tableDensity === 'compact' ? 2.5 : design.tableDensity === 'spacious' ? 5.5 : 4.0)
+    ? 3.2
+    : (design.tableDensity === 'compact' ? 3.0 : design.tableDensity === 'spacious' ? 7.0 : 5.0)
 
   const brandHeadingFontSize = (
     isA5
-      ? Math.max(14, (design.brandFontSize || 22) * 0.75)
-      : Math.max(18, design.brandFontSize || 22)
+      ? Math.max(16, (design.brandFontSize || 24) * 0.8)
+      : Math.max(22, (design.brandFontSize || 26))
   ) * fontScaleMult
 
-  const amountRowFontSize = (isA5 ? 6.6 : (isExtremeVMargin ? 7.2 : 8.2)) * fontScaleMult
-  const amountTotalFontSize = (isA5 ? 9.5 : (isExtremeVMargin ? 10.5 : 12.0)) * fontScaleMult
+  const amountRowFontSize = (isA5 ? 7.8 : (isExtremeVMargin ? 8.2 : 9.5)) * fontScaleMult
+  const amountTotalFontSize = (isA5 ? 12.5 : (isExtremeVMargin ? 13.5 : 15.5)) * fontScaleMult
 
   const styles = StyleSheet.create({
     page: {
@@ -295,18 +296,20 @@ export function InvoicePDF({
       textTransform: 'uppercase',
     },
     businessLegalName: {
-      fontSize: (isA5 ? 7.5 : 9.5) * fontScaleMult,
+      fontSize: (isA5 ? 8.8 : 11.2) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
     },
     businessAddressLine: {
-      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
-      color: '#475569',
+      fontSize: (isA5 ? 7.5 : 9.2) * fontScaleMult,
+      color: '#1E293B',
+      lineHeight: 1.4,
       marginTop: 0.5,
     },
     businessMetaLine: {
-      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
-      color: '#475569',
+      fontSize: (isA5 ? 7.5 : 9.2) * fontScaleMult,
+      color: '#1E293B',
+      lineHeight: 1.4,
       marginTop: 0.5,
     },
 
@@ -326,7 +329,7 @@ export function InvoicePDF({
       borderRightColor: activeTheme.border,
     },
     bannerTitleText: {
-      fontSize: (isA5 ? 13 : 16) * fontScaleMult,
+      fontSize: (isA5 ? 14 : 17.5) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.primary,
       letterSpacing: 2,
@@ -346,14 +349,15 @@ export function InvoicePDF({
     },
     metaLabel: {
       width: '45%',
-      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 8.0)) * fontScaleMult,
+      fontSize: (isA5 ? 7.5 : (isExtremeVMargin ? 8.0 : 9.5)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
     },
     metaVal: {
       width: '55%',
       textAlign: 'right',
-      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 8.0)) * fontScaleMult,
+      fontSize: (isA5 ? 7.5 : (isExtremeVMargin ? 8.0 : 9.5)) * fontScaleMult,
+      fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
     },
 
@@ -372,7 +376,7 @@ export function InvoicePDF({
       borderBottomColor: activeTheme.border,
     },
     colHeaderText: {
-      fontSize: (isA5 ? 6.8 : (isExtremeVMargin ? 7.2 : 8.5)) * fontScaleMult,
+      fontSize: (isA5 ? 8.0 : (isExtremeVMargin ? 8.5 : 10.0)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#ffffff',
     },
@@ -381,15 +385,16 @@ export function InvoicePDF({
       minHeight: isA5 ? 46 : (isExtremeVMargin ? 48 : (isLargeVMargin ? 54 : 62)),
     },
     partyName: {
-      fontSize: (isA5 ? 8.0 : (isExtremeVMargin ? 8.5 : 10.0)) * fontScaleMult,
+      fontSize: (isA5 ? 9.8 : (isExtremeVMargin ? 10.5 : 12.5)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
-      marginBottom: 1,
+      marginBottom: 2,
     },
     partyLine: {
-      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 7.8)) * fontScaleMult,
-      color: '#475569',
-      lineHeight: 1.25,
+      fontSize: (isA5 ? 7.6 : (isExtremeVMargin ? 8.2 : 9.5)) * fontScaleMult,
+      color: '#1E293B',
+      lineHeight: 1.45,
+      marginBottom: 1,
     },
     infoRow: {
       flexDirection: 'row',
@@ -399,12 +404,12 @@ export function InvoicePDF({
     },
     infoLabel: {
       width: '45%',
-      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 7.8)) * fontScaleMult,
-      color: '#64748B',
+      fontSize: (isA5 ? 7.5 : (isExtremeVMargin ? 8.0 : 9.2)) * fontScaleMult,
+      color: '#334155',
     },
     infoVal: {
       width: '55%',
-      fontSize: (isA5 ? 6.2 : (isExtremeVMargin ? 6.8 : 7.8)) * fontScaleMult,
+      fontSize: (isA5 ? 7.5 : (isExtremeVMargin ? 8.0 : 9.5)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
       textAlign: 'right',
@@ -425,11 +430,11 @@ export function InvoicePDF({
     thCell: {
       borderRightWidth: showColDividers ? borderWidthNum : 0,
       borderRightColor: activeTheme.border,
-      paddingVertical: isA5 ? 2.8 : 3.8,
-      paddingHorizontal: 2,
+      paddingVertical: isA5 ? 3.5 : 4.8,
+      paddingHorizontal: 2.5,
     },
     thText: {
-      fontSize: (isA5 ? 6.8 : 8.2) * fontScaleMult,
+      fontSize: (isA5 ? 8.0 : 9.8) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#ffffff',
       textAlign: 'center',
@@ -447,13 +452,15 @@ export function InvoicePDF({
       paddingHorizontal: 2.5,
     },
     tdText: {
-      fontSize: (isA5 ? 6.8 : 8.2) * fontScaleMult,
+      fontSize: (isA5 ? 7.8 : 9.5) * fontScaleMult,
       color: activeTheme.textDark,
+      lineHeight: 1.35,
     },
     tdTextBold: {
-      fontSize: (isA5 ? 7.0 : 8.5) * fontScaleMult,
+      fontSize: (isA5 ? 8.2 : 10.0) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
+      lineHeight: 1.35,
     },
 
     // Total Row
@@ -462,7 +469,7 @@ export function InvoicePDF({
       backgroundColor: activeTheme.totalRowBg,
       borderTopWidth: borderWidthNum,
       borderTopColor: activeTheme.border,
-      paddingVertical: isA5 ? 2.8 : 3.8,
+      paddingVertical: isA5 ? 3.5 : 4.8,
       alignItems: 'center',
     },
 
@@ -484,10 +491,10 @@ export function InvoicePDF({
       minHeight: isExtremeVMargin ? 24 : (isLargeVMargin ? 32 : (isA5 ? 38 : 46)),
     },
     wordsText: {
-      fontSize: (isA5 ? 7.0 : (isExtremeVMargin ? 7.4 : 8.5)) * fontScaleMult,
+      fontSize: (isA5 ? 8.0 : (isExtremeVMargin ? 8.5 : 10.0)) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
-      lineHeight: 1.25,
+      lineHeight: 1.4,
     },
     amountsContainer: {
       width: design.showAmountInWords ? '42%' : '100%',
@@ -500,16 +507,16 @@ export function InvoicePDF({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: isExtremeVMargin ? 0.8 : (isLargeVMargin ? 1.1 : 1.5),
+      paddingVertical: isExtremeVMargin ? 1.0 : (isLargeVMargin ? 1.4 : 2.0),
       paddingHorizontal: 4,
-      borderBottomWidth: 0.5,
-      borderBottomColor: '#F1F5F9',
+      borderBottomWidth: 0.8,
+      borderBottomColor: '#CBD5E1',
     },
     amountLineTotal: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: isExtremeVMargin ? 1.4 : (isLargeVMargin ? 1.8 : 2.4),
+      paddingVertical: isExtremeVMargin ? 1.8 : (isLargeVMargin ? 2.4 : 3.2),
       paddingHorizontal: 4,
       borderTopWidth: borderWidthNum,
       borderTopColor: activeTheme.border,
@@ -570,7 +577,7 @@ export function InvoicePDF({
       marginTop: 2,
     },
     upiPillText: {
-      fontSize: 4.8 * fontScaleMult,
+      fontSize: 5.5 * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#ffffff',
       textAlign: 'center',
@@ -579,20 +586,20 @@ export function InvoicePDF({
       flex: 1,
     },
     bankDetailRow: {
-      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
+      fontSize: (isA5 ? 7.5 : 9.2) * fontScaleMult,
       color: activeTheme.textDark,
-      lineHeight: 1.25,
-      marginBottom: 0.8,
+      lineHeight: 1.4,
+      marginBottom: 1.5,
     },
     termsBody: {
       padding: isExtremeVMargin ? (isA5 ? 2.5 : 3) : isLargeVMargin ? (isA5 ? 3 : 3.8) : (isA5 ? 3.5 : 4.5),
       backgroundColor: '#ffffff',
     },
     termsItem: {
-      fontSize: (isA5 ? (design.termsFontSize || 6.5) * 0.9 : (design.termsFontSize || 7.2)) * fontScaleMult,
-      color: '#475569',
-      lineHeight: 1.25,
-      marginBottom: 1.5,
+      fontSize: (isA5 ? (design.termsFontSize || 7.5) * 0.9 : (design.termsFontSize || 8.8)) * fontScaleMult,
+      color: '#1E293B',
+      lineHeight: 1.4,
+      marginBottom: 2,
     },
     signatoryBody: {
       padding: isExtremeVMargin ? (isA5 ? 2.5 : 3) : isLargeVMargin ? (isA5 ? 3 : 3.8) : (isA5 ? 3.5 : 4.5),
@@ -602,7 +609,7 @@ export function InvoicePDF({
       minHeight: isExtremeVMargin ? 36 : (isLargeVMargin ? 46 : (isA5 ? 54 : 64)),
     },
     signatoryFor: {
-      fontSize: (isA5 ? 7.2 : 8.8) * fontScaleMult,
+      fontSize: (isA5 ? 8.2 : 10.0) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: activeTheme.textDark,
       textAlign: 'center',
@@ -621,9 +628,9 @@ export function InvoicePDF({
       alignItems: 'center',
     },
     signatoryLabel: {
-      fontSize: (isA5 ? 6.2 : 7.6) * fontScaleMult,
+      fontSize: (isA5 ? 7.5 : 9.2) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
-      color: '#64748B',
+      color: '#334155',
       textAlign: 'center',
     },
   })
