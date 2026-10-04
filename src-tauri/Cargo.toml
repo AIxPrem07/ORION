@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "1.5.1"
+version = "1.5.2"
 description = "ORION - Professional Business Management"
 authors = ["ORION Team"]
 license = ""

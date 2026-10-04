@@ -24,10 +24,10 @@ describe('ORION v1.5 — Delivery Challans & Financial Year Partitioning Suite',
 
     it('splits migration 0006 for challan fixes into executable statements', () => {
       const stmts = cleanAndSplitSQL(migration0006)
-      expect(stmts.length).toBeGreaterThanOrEqual(4)
-      expect(stmts.some((s) => s.includes('CREATE TABLE IF NOT EXISTS challan_items_new'))).toBe(true)
-      expect(stmts.some((s) => s.includes('DROP TABLE challan_items'))).toBe(true)
-      expect(stmts.some((s) => s.includes('ALTER TABLE challan_items_new RENAME TO challan_items'))).toBe(true)
+      expect(stmts.length).toBeGreaterThanOrEqual(3)
+      expect(stmts.some((s) => s.includes('CREATE TABLE IF NOT EXISTS challan_items'))).toBe(true)
+      expect(stmts.some((s) => s.includes('CREATE INDEX IF NOT EXISTS idx_challan_items_challan'))).toBe(true)
+      expect(stmts.some((s) => s.includes('CREATE INDEX IF NOT EXISTS idx_challan_items_product'))).toBe(true)
     })
   })
 

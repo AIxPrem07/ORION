@@ -47,7 +47,7 @@ export function AppFooter() {
         <span className="text-gray-300">•</span>
 
         <span className="font-mono text-gray-600 font-medium bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-          v1.5.1
+          v1.5.2
         </span>
       </div>
     </footer>

@@ -83,6 +83,20 @@ export async function initializeDatabase(): Promise<void> {
 
   // Run migrations
   await runMigrations()
+
+  // Self-heal check: ensure challan_items table exists regardless of previous upgrade states
+  try {
+    const hasItems = await dbSelect<{ name: string }>(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='challan_items'`,
+      [],
+    )
+    if (hasItems.length === 0) {
+      console.warn('[ORION DB] challan_items table missing on startup, auto-repairing schema...')
+      await applyMigration0006()
+    }
+  } catch (healErr) {
+    console.warn('[ORION DB] Schema self-heal warning:', healErr)
+  }
 }
 
 /** Get the current database version from app_settings */
@@ -151,6 +165,104 @@ async function executeMigrationSQL(sql: string): Promise<void> {
   }
 }
 
+/**
+ * Safely migrate and repair challan_items schema.
+ * Handles all possible previous states:
+ * - Table does not exist -> creates it directly
+ * - challan_items_new exists from a previous partial run -> recovers it
+ * - challan_items exists with NOT NULL product_id -> safely recreates it with PRAGMA foreign_keys = OFF
+ * - Already healthy -> preserves all data and ensures indexes
+ */
+export async function applyMigration0006(): Promise<void> {
+  const db = await getDb()
+
+  // 1. Temporarily disable foreign keys for structural table adjustments
+  await db.execute('PRAGMA foreign_keys = OFF', [])
+
+  try {
+    const tables = await dbSelect<{ name: string }>(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('challan_items', 'challan_items_new')`,
+      [],
+    )
+    const tableNames = new Set(tables.map((t) => t.name))
+
+    const hasChallanItems = tableNames.has('challan_items')
+    const hasChallanItemsNew = tableNames.has('challan_items_new')
+
+    if (!hasChallanItems && hasChallanItemsNew) {
+      // challan_items was dropped in a previous failed attempt, but challan_items_new exists: recover it!
+      await db.execute(`ALTER TABLE challan_items_new RENAME TO challan_items`, [])
+    } else if (!hasChallanItems && !hasChallanItemsNew) {
+      // Neither exists: create clean table directly
+      await db.execute(
+        `CREATE TABLE IF NOT EXISTS challan_items (
+          id TEXT PRIMARY KEY,
+          challan_id TEXT NOT NULL REFERENCES challans(id) ON DELETE CASCADE,
+          product_id TEXT REFERENCES products(id),
+          description TEXT NOT NULL,
+          hsn_code TEXT,
+          quantity INTEGER NOT NULL,
+          unit TEXT NOT NULL DEFAULT 'Nos',
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          sort_order INTEGER NOT NULL DEFAULT 0
+        )`,
+        [],
+      )
+    } else if (hasChallanItems) {
+      // challan_items exists: check if product_id has NOT NULL constraint
+      const columns = await dbSelect<{ name: string; notnull: number }>(
+        `PRAGMA table_info(challan_items)`,
+        [],
+      )
+      const prodCol = columns.find((c) => c.name === 'product_id')
+
+      if (prodCol && prodCol.notnull === 1) {
+        // Need to recreate table to drop NOT NULL constraint
+        await db.execute(`DROP TABLE IF EXISTS challan_items_new`, [])
+
+        await db.execute(
+          `CREATE TABLE challan_items_new (
+            id TEXT PRIMARY KEY,
+            challan_id TEXT NOT NULL REFERENCES challans(id) ON DELETE CASCADE,
+            product_id TEXT REFERENCES products(id),
+            description TEXT NOT NULL,
+            hsn_code TEXT,
+            quantity INTEGER NOT NULL,
+            unit TEXT NOT NULL DEFAULT 'Nos',
+            unit_price INTEGER NOT NULL DEFAULT 0,
+            total_amount INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )`,
+          [],
+        )
+
+        await db.execute(
+          `INSERT INTO challan_items_new (id, challan_id, product_id, description, hsn_code, quantity, unit, unit_price, total_amount, sort_order)
+           SELECT id, challan_id, CASE WHEN product_id = '' THEN NULL ELSE product_id END, description, hsn_code, quantity, unit, unit_price, total_amount, sort_order
+           FROM challan_items`,
+          [],
+        )
+
+        await db.execute(`DROP TABLE challan_items`, [])
+        await db.execute(`ALTER TABLE challan_items_new RENAME TO challan_items`, [])
+      } else {
+        // Already nullable! Clean up any leftover temp table
+        if (hasChallanItemsNew) {
+          await db.execute(`DROP TABLE IF EXISTS challan_items_new`, [])
+        }
+      }
+    }
+
+    // Always ensure indexes exist
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_challan_items_challan ON challan_items(challan_id)`, [])
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_challan_items_product ON challan_items(product_id)`, [])
+  } finally {
+    // Re-enable foreign keys
+    await db.execute('PRAGMA foreign_keys = ON', [])
+  }
+}
+
 /** Run all pending migrations */
 async function runMigrations(): Promise<void> {
   const currentVersion = await getCurrentVersion()
@@ -167,7 +279,11 @@ async function runMigrations(): Promise<void> {
   for (const migration of pendingMigrations) {
     console.log(`[ORION DB] Applying migration ${migration.version}: ${migration.description}`)
     try {
-      await executeMigrationSQL(migration.sql)
+      if (migration.version === 6) {
+        await applyMigration0006()
+      } else {
+        await executeMigrationSQL(migration.sql)
+      }
       await setCurrentVersion(migration.version)
       console.log(`[ORION DB] Migration ${migration.version} applied successfully`)
     } catch (err) {
