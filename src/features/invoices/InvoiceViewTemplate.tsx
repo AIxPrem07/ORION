@@ -819,8 +819,8 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
                 )
               })}
 
-              {/* Blank Padding Rows for Full Bill Layout */}
-              {Array.from({ length: Math.max(0, Math.min(4, (design.minTableRows ?? 4) - invoice.items.length)) }).map((_, bIdx) => {
+              {/* Minimum 10 Table Rows normally printed for full page elegance */}
+              {Array.from({ length: Math.max(0, (Math.max(10, design.minTableRows ?? 10)) - invoice.items.length) }).map((_, bIdx) => {
                 const isZebra = (invoice.items.length + bIdx) % 2 === 1 && design.zebraStriping
                 return (
                   <tr
@@ -1350,21 +1350,21 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
                     : 'md:col-span-12'
                 } flex flex-col bg-white`}
               >
-                <div className="p-3 flex-1 flex flex-col justify-between items-center text-center">
+                <div className="p-3 flex-1 min-h-[6.5rem] flex flex-col justify-between items-center text-center">
                   <p className="font-bold text-xs text-gray-900">
                     {design.signatoryForText || `For ${business.name}`}
                   </p>
-                  <div className="py-2">
+                  <div className="py-2.5 h-12 flex items-center justify-center">
                     {design.signatureStyle === 'uploaded' && design.uploadedSignatureUrl ? (
                       <img
                         src={design.uploadedSignatureUrl}
                         alt="Signature"
-                        className="h-10 max-w-[120px] object-contain"
+                        className="h-11 max-w-[130px] object-contain"
                       />
                     ) : design.signatureStyle === 'blank_line' ? (
-                      <div className="h-8" />
+                      <div className="h-10" />
                     ) : (
-                      <svg width="120" height="32" viewBox="0 0 200 60" fill="none">
+                      <svg width="130" height="36" viewBox="0 0 200 60" fill="none">
                         <path
                           d="M 20 45 Q 45 10 65 40 T 95 28 Q 120 5 145 35 T 175 30 M 35 42 Q 75 52 155 42"
                           stroke={primaryColor}

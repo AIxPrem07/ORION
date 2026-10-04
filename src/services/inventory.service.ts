@@ -70,6 +70,7 @@ export interface StockMovementInput {
   notes?: string
   createdBy?: string
   createdAt?: string
+  allowNegative?: boolean
 }
 
 /**
@@ -91,8 +92,8 @@ export async function recordStockMovement(
   const quantityBefore = currentRows[0]?.stock ?? 0
   const quantityAfter = quantityBefore + input.quantity
 
-  // Prevent negative stock (allow ADJUSTMENT and DAMAGE to override)
-  const allowNegative = ['ADJUSTMENT', 'DAMAGE'].includes(input.movementType)
+  // Prevent negative stock (allow ADJUSTMENT and DAMAGE to override, or explicit allowNegative flag)
+  const allowNegative = Boolean(input.allowNegative) || ['ADJUSTMENT', 'DAMAGE'].includes(input.movementType)
   if (!allowNegative && quantityAfter < 0) {
     throw new Error(
       `Insufficient stock for product. Available: ${quantityBefore}, required: ${Math.abs(input.quantity)}`,

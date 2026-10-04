@@ -57,7 +57,7 @@ function rowToChallanItem(r: Record<string, unknown>): ChallanItem {
   return {
     id: r.id as string,
     challanId: r.challan_id as string,
-    productId: r.product_id as string,
+    productId: (r.product_id as string) || null,
     description: r.description as string,
     hsnCode: (r.hsn_code as string) || null,
     quantity: Number(r.quantity ?? 0),
@@ -133,9 +133,9 @@ export async function createChallan(
     return {
       id: generateId(),
       challanId,
-      productId: it.productId,
-      description: it.description,
-      hsnCode: it.hsnCode || null,
+      productId: it.productId?.trim() ? it.productId.trim() : null,
+      description: it.description || 'Item',
+      hsnCode: it.hsnCode?.trim() || null,
       quantity: qty,
       unit: it.unit || 'Nos',
       unitPrice: ratePaise,
@@ -152,6 +152,24 @@ export async function createChallan(
   return dbTransaction(async (tx) => {
     const challanNum = data.challanNumber?.trim() || await getNextChallanNumber(businessId, fy)
 
+    // Validate userId against users table
+    let validUserId: string | null = null
+    if (userId && userId.trim()) {
+      const userRows = await tx.select<{ id: string }>(`SELECT id FROM users WHERE id = ? LIMIT 1`, [userId.trim()])
+      if (userRows.length > 0) {
+        validUserId = userId.trim()
+      }
+    }
+
+    // Validate customerId against customers table
+    let validCustomerId: string | null = null
+    if (data.customerId && data.customerId.trim()) {
+      const custRows = await tx.select<{ id: string }>(`SELECT id FROM customers WHERE id = ? LIMIT 1`, [data.customerId.trim()])
+      if (custRows.length > 0) {
+        validCustomerId = data.customerId.trim()
+      }
+    }
+
     // 1. Insert challan header
     await tx.execute(
       `INSERT INTO challans (
@@ -165,7 +183,7 @@ export async function createChallan(
         businessId,
         challanNum,
         fy,
-        data.customerId || null,
+        validCustomerId,
         JSON.stringify(customerSnapshot),
         data.challanDate,
         totalAmount,
@@ -175,48 +193,60 @@ export async function createChallan(
         data.vehicleNumber || null,
         data.transporterName || null,
         data.lrRrNumber || null,
-        userId || null,
+        validUserId,
         now,
         now,
       ],
     )
 
-    // 2. Insert items
+    // 2. Insert items and handle stock deduction
     for (const it of parsedItems) {
+      // Validate productId against products table
+      let validProductId: string | null = null
+      if (it.productId) {
+        const prodRows = await tx.select<{ id: string }>(`SELECT id FROM products WHERE id = ? LIMIT 1`, [it.productId])
+        if (prodRows.length > 0) {
+          validProductId = it.productId
+        }
+      }
+
       await tx.execute(
         `INSERT INTO challan_items (
           id, challan_id, product_id, description, hsn_code, quantity, unit, unit_price, total_amount, sort_order
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [it.id, it.challanId, it.productId, it.description, it.hsnCode, it.quantity, it.unit, it.unitPrice, it.totalAmount, it.sortOrder],
+        [it.id, it.challanId, validProductId, it.description, it.hsnCode, it.quantity, it.unit, it.unitPrice, it.totalAmount, it.sortOrder],
       )
 
-      // 3. Deduct stock for each product item
-      if (it.productId) {
+      // 3. Deduct stock for verified inventory products
+      if (validProductId) {
         const actualQty = Math.round(it.quantity / 100)
-        await recordStockMovement(
-          {
-            businessId,
-            productId: it.productId,
-            movementType: 'SALE',
-            quantity: -actualQty,
-            referenceType: 'CHALLAN',
-            referenceId: challanId,
-            notes: `Dispatched on Challan #${challanNum}`,
-            createdBy: userId,
-            createdAt: data.challanDate,
-          },
-          tx,
-        )
+        if (actualQty > 0) {
+          await recordStockMovement(
+            {
+              businessId,
+              productId: validProductId,
+              movementType: 'SALE',
+              quantity: -actualQty,
+              referenceType: 'CHALLAN',
+              referenceId: challanId,
+              notes: `Dispatched on Challan #${challanNum}`,
+              createdBy: validUserId || undefined,
+              createdAt: data.challanDate,
+              allowNegative: true,
+            },
+            tx,
+          )
+        }
       }
     }
 
     // 4. Record Customer Ledger Entry (Goods dispatched on Challan)
-    if (data.customerId && totalAmount > 0) {
+    if (validCustomerId && totalAmount > 0) {
       await createLedgerEntry(
         {
           businessId,
           partyType: 'CUSTOMER',
-          partyId: data.customerId,
+          partyId: validCustomerId,
           referenceType: 'CHALLAN',
           referenceId: challanId,
           debit: totalAmount,
@@ -226,7 +256,7 @@ export async function createChallan(
         },
         tx,
       )
-      await recalculatePartyLedgerBalances(businessId, 'CUSTOMER', data.customerId, tx)
+      await recalculatePartyLedgerBalances(businessId, 'CUSTOMER', validCustomerId, tx)
     }
 
     return {
@@ -234,7 +264,7 @@ export async function createChallan(
       businessId,
       challanNumber: challanNum,
       financialYear: fy,
-      customerId: data.customerId || null,
+      customerId: validCustomerId,
       customerSnapshot,
       challanDate: data.challanDate,
       status: 'DELIVERED',
@@ -245,12 +275,15 @@ export async function createChallan(
       vehicleNumber: data.vehicleNumber || null,
       transporterName: data.transporterName || null,
       lrRrNumber: data.lrRrNumber || null,
-      createdBy: userId || null,
+      createdBy: validUserId,
       isDeleted: false,
       deletedAt: null,
       createdAt: now,
       updatedAt: now,
-      items: parsedItems,
+      items: parsedItems.map((item) => ({
+        ...item,
+        productId: item.productId || null,
+      })),
     }
   })
 }

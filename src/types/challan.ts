@@ -13,7 +13,7 @@ import type { CustomerSnapshot } from './customer'
 export interface ChallanItem {
   id: string
   challanId: string
-  productId: string
+  productId: string | null
   description: string
   hsnCode?: string | null
   quantity: number        // stored multiplied by 100

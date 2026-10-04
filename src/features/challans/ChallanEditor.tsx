@@ -7,6 +7,7 @@ import { Input } from '@components/ui/Input'
 import { Select } from '@components/ui/Select'
 import { Card } from '@components/ui/Card'
 import { useBusinessStore } from '@store/business.store'
+import { useAuthStore } from '@store/auth.store'
 import { useNotificationStore } from '@store/notification.store'
 import { useFiscalYearStore } from '@store/fiscal-year.store'
 import { listCustomers } from '@services/customer.service'
@@ -22,6 +23,7 @@ import type { ChallanItemFormData } from '@/types/challan'
 export default function ChallanEditor() {
   const navigate = useNavigate()
   const { business } = useBusinessStore()
+  const { user } = useAuthStore()
   const { success, error } = useNotificationStore()
   const { selectedFY } = useFiscalYearStore()
 
@@ -147,7 +149,7 @@ export default function ChallanEditor() {
       const challan = await createChallan(
         business.id,
         {
-          customerId: selectedCustomerId,
+          customerId: selectedCustomerId || '',
           customer: selectedCustomer,
           challanDate,
           financialYear,
@@ -158,7 +160,7 @@ export default function ChallanEditor() {
           notes,
           items,
         },
-        business.id,
+        user?.id,
       )
 
       success(`Delivery Challan #${challan.challanNumber} created! Stock deducted and customer ledger updated.`)

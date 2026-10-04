@@ -47,7 +47,7 @@ export async function generateInvoicePDFBlob(
 
   if (!paperSize) {
     const savedSize = await getAppSetting('invoice_paper_size')
-    if (savedSize === 'A4' || savedSize === 'A5' || savedSize === 'THERMAL') {
+    if (savedSize === 'A4' || savedSize === 'A5' || savedSize === 'LETTER' || savedSize === 'THERMAL') {
       paperSize = savedSize
     } else {
       paperSize = 'A4'

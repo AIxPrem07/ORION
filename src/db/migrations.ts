@@ -16,6 +16,7 @@ import migration_0002 from '../../src-tauri/migrations/0002_gst_enhancements.sql
 import migration_0003 from '../../src-tauri/migrations/0003_licensing_and_product_keys.sql?raw'
 import migration_0004 from '../../src-tauri/migrations/0004_invoice_bin_and_numbering.sql?raw'
 import migration_0005 from '../../src-tauri/migrations/0005_challan_and_financial_year.sql?raw'
+import migration_0006 from '../../src-tauri/migrations/0006_challan_fixes.sql?raw'
 
 import { dbExecute, dbSelect, getDb } from './client'
 import { nowISO } from '@utils/date'
@@ -52,6 +53,11 @@ const MIGRATIONS: Migration[] = [
     version: 5,
     description: 'Delivery Challans & Financial Year partitioning',
     sql: migration_0005,
+  },
+  {
+    version: 6,
+    description: 'Delivery Challan items foreign key & nullability fixes',
+    sql: migration_0006,
   },
 ]
 

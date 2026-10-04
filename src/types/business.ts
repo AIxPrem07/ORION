@@ -36,7 +36,7 @@ export interface AppSettings {
   updatedAt: ISODateTimeString
 }
 
-export type InvoicePaperSize = 'A4' | 'A5' | 'THERMAL'
+export type InvoicePaperSize = 'A4' | 'A5' | 'LETTER' | 'THERMAL'
 export type InvoiceTheme = 'SLATE_BLUE' | 'CLASSIC_NAVY' | 'MONOCHROME' | 'EMERALD'
 
 export type AppSettingKey =

@@ -164,7 +164,7 @@ export default function InvoiceEditor() {
   // Load saved paper size, theme preferences, and custom design
   useEffect(() => {
     getAppSetting('invoice_paper_size').then((s) => {
-      if (s === 'A4' || s === 'A5' || s === 'THERMAL') setPaperSize(s)
+      if (s === 'A4' || s === 'A5' || s === 'LETTER' || s === 'THERMAL') setPaperSize(s)
     })
     getAppSetting('invoice_theme').then((t) => {
       if (t === 'SLATE_BLUE' || t === 'CLASSIC_NAVY' || t === 'MONOCHROME' || t === 'EMERALD') setInvoiceTheme(t)
@@ -858,6 +858,15 @@ export default function InvoiceEditor() {
                     }`}
                   >
                     A4 (Full Page)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePaperSize('LETTER')}
+                    className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                      paperSize === 'LETTER' ? 'bg-white text-orion-primary shadow-sm font-semibold' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    US Letter
                   </button>
                   <button
                     type="button"

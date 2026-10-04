@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { cleanAndSplitSQL } from '@/db/migrations'
 import migration0005 from '../../src-tauri/migrations/0005_challan_and_financial_year.sql?raw'
+import migration0006 from '../../src-tauri/migrations/0006_challan_fixes.sql?raw'
 import {
   getFinancialYearFromDate,
   formatFinancialYearLabel,
@@ -11,7 +12,7 @@ import {
 import { buildInvoiceNumber } from '@/utils/format'
 
 describe('ORION v1.5 — Delivery Challans & Financial Year Partitioning Suite', () => {
-  describe('Migration 0005 SQL Parsing', () => {
+  describe('Migration 0005 & 0006 SQL Parsing', () => {
     it('splits migration 0005 into executable SQL statements', () => {
       const stmts = cleanAndSplitSQL(migration0005)
       expect(stmts.length).toBeGreaterThan(5)
@@ -19,6 +20,14 @@ describe('ORION v1.5 — Delivery Challans & Financial Year Partitioning Suite',
       expect(stmts.some((s) => s.includes('CREATE TABLE IF NOT EXISTS challans'))).toBe(true)
       expect(stmts.some((s) => s.includes('CREATE TABLE IF NOT EXISTS challan_items'))).toBe(true)
       expect(stmts.some((s) => s.includes('CREATE TABLE IF NOT EXISTS challan_sequences'))).toBe(true)
+    })
+
+    it('splits migration 0006 for challan fixes into executable statements', () => {
+      const stmts = cleanAndSplitSQL(migration0006)
+      expect(stmts.length).toBeGreaterThanOrEqual(4)
+      expect(stmts.some((s) => s.includes('CREATE TABLE IF NOT EXISTS challan_items_new'))).toBe(true)
+      expect(stmts.some((s) => s.includes('DROP TABLE challan_items'))).toBe(true)
+      expect(stmts.some((s) => s.includes('ALTER TABLE challan_items_new RENAME TO challan_items'))).toBe(true)
     })
   })
 

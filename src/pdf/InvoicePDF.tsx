@@ -220,8 +220,10 @@ export function InvoicePDF({
     )
   }
 
-  // A4 / A5 Layout with Continuous Unbroken Grid Lines
+  // A4 / Letter / A5 Layout with Continuous Unbroken Grid Lines
   const isA5 = paperSize === 'A5'
+  const isLetter = paperSize === 'LETTER'
+  const pageSize = isA5 ? 'A5' : isLetter ? 'LETTER' : 'A4'
 
   // Margins converted to PDF points (1 mm = 2.8346 pt)
   const padTop = (design.marginTop ?? 8) * 2.834
@@ -606,7 +608,7 @@ export function InvoicePDF({
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: '#ffffff',
-      minHeight: isExtremeVMargin ? 28 : (isLargeVMargin ? 34 : (isA5 ? 38 : 44)),
+      minHeight: isA5 ? 54 : (isExtremeVMargin ? 48 : (isLargeVMargin ? 58 : 68)),
     },
     signatoryFor: {
       fontSize: (isA5 ? 7.2 : 8.5) * fontScaleMult,
@@ -615,7 +617,7 @@ export function InvoicePDF({
       textAlign: 'center',
     },
     signatureGraphic: {
-      height: 14,
+      height: isA5 ? 26 : (isExtremeVMargin ? 22 : (isLargeVMargin ? 28 : 36)),
       justifyContent: 'center',
       alignItems: 'center',
       marginVertical: 1,
@@ -624,11 +626,11 @@ export function InvoicePDF({
       borderTopWidth: borderWidthNum,
       borderTopColor: activeTheme.border,
       width: '90%',
-      paddingTop: 1.5,
+      paddingTop: 2.5,
       alignItems: 'center',
     },
     signatoryLabel: {
-      fontSize: (isA5 ? 6.8 : 7.8) * fontScaleMult,
+      fontSize: (isA5 ? 7.2 : 8.2) * fontScaleMult,
       fontFamily: 'Helvetica-Bold',
       color: '#334155',
       textAlign: 'center',
@@ -670,7 +672,7 @@ export function InvoicePDF({
 
   return (
     <Document title={`Invoice-${invoice.invoiceNumber}`} author={business.name}>
-      <Page size={isA5 ? 'A5' : 'A4'} style={styles.page}>
+      <Page size={pageSize} style={styles.page}>
         {/* ======================================================== */}
         {/* UNIFIED CONTINUOUS BOUNDING FRAME — ZERO CUTS IN LINES    */}
         {/* ======================================================== */}
@@ -1023,14 +1025,14 @@ export function InvoicePDF({
               )
             })}
 
-            {/* Blank Padding Rows for Full Bill Layout & In-Hand Quality */}
+            {/* Minimum 10 Table Rows normally printed for full page elegance */}
             {(() => {
-              const maxAllowedBlankRows = isExtremeVMargin ? 1 : isLargeVMargin ? 2 : 4
-              const minTableRows = typeof design.minTableRows === 'number'
-                ? Math.min(maxAllowedBlankRows, design.minTableRows)
-                : maxAllowedBlankRows
-              const blankRowsCount = Math.max(0, minTableRows - invoice.items.length)
-              const blankRowHeight = (isA5 ? 9 : 12) * fontScaleMult
+              const targetMinRows = typeof design.minTableRows === 'number'
+                ? Math.max(10, design.minTableRows)
+                : 10
+              const blankRowsCount = Math.max(0, targetMinRows - invoice.items.length)
+              // Calibrated row height to fit comfortably on 1 single page on Letter (792pt) and A4 (842pt)
+              const blankRowHeight = (isA5 ? 9.5 : isLetter ? 12.0 : 13.5) * fontScaleMult
 
               return Array.from({ length: blankRowsCount }).map((_, bIdx) => {
                 const isZebra = (invoice.items.length + bIdx) % 2 === 1 && design.zebraStriping
@@ -1383,14 +1385,14 @@ export function InvoicePDF({
                     <Text style={styles.signatoryFor}>
                       {design.signatoryForText || `For ${business.name}`}
                     </Text>
-                    <View style={[styles.signatureGraphic, { height: isExtremeVMargin ? 13 : isLargeVMargin ? 16 : 20 }]}>
+                    <View style={[styles.signatureGraphic, { height: isA5 ? 26 : (isExtremeVMargin ? 22 : (isLargeVMargin ? 28 : 36)) }]}>
                       {design.signatureStyle === 'uploaded' && design.uploadedSignatureUrl ? (
                         <Image
                           src={design.uploadedSignatureUrl}
-                          style={{ height: isExtremeVMargin ? 13 : isLargeVMargin ? 16 : 20, width: 80, objectFit: 'contain' }}
+                          style={{ height: isA5 ? 26 : (isExtremeVMargin ? 22 : (isLargeVMargin ? 28 : 36)), width: 95, objectFit: 'contain' }}
                         />
                       ) : design.signatureStyle === 'blank_line' ? null : (
-                        <Svg width={80} height={isExtremeVMargin ? 13 : isLargeVMargin ? 16 : 20} viewBox="0 0 200 60">
+                        <Svg width={95} height={isA5 ? 26 : (isExtremeVMargin ? 22 : (isLargeVMargin ? 28 : 36))} viewBox="0 0 200 60">
                           <Path
                             d="M 20 45 Q 45 10 65 40 T 95 28 Q 120 5 145 35 T 175 30 M 35 42 Q 75 52 155 42"
                             fill="none"

@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_challans_deleted ON challans(business_id, is_dele
 CREATE TABLE IF NOT EXISTS challan_items (
   id TEXT PRIMARY KEY,
   challan_id TEXT NOT NULL REFERENCES challans(id) ON DELETE CASCADE,
-  product_id TEXT NOT NULL REFERENCES products(id),
+  product_id TEXT REFERENCES products(id),
   description TEXT NOT NULL,
   hsn_code TEXT,
   quantity INTEGER NOT NULL,

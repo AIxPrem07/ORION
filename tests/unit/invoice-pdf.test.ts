@@ -282,4 +282,23 @@ describe('InvoicePDF Rendering Suite', () => {
       expect(stream).toBeDefined()
     }
   })
+
+  it('renders flawlessly on US Letter and A4 with minimum 10 rows and big signature box', async () => {
+    for (const size of ['LETTER', 'A4'] as const) {
+      const element = React.createElement(InvoicePDF, {
+        invoice: mockInvoice,
+        business: mockBusiness,
+        paperSize: size,
+        customDesign: {
+          minTableRows: 10,
+          showSignatureBlock: true,
+          showBankDetails: true,
+          showTermsConditions: true,
+        } as any,
+      })
+
+      const stream = await pdf(element as any).toBuffer()
+      expect(stream).toBeDefined()
+    }
+  })
 })

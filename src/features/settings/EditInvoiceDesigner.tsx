@@ -455,6 +455,17 @@ export default function EditInvoiceDesigner() {
             </button>
             <button
               type="button"
+              onClick={() => setPaperSize('LETTER')}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                paperSize === 'LETTER'
+                  ? 'bg-white text-indigo-700 font-semibold shadow-xs'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Letter
+            </button>
+            <button
+              type="button"
               onClick={() => setPaperSize('A5')}
               className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                 paperSize === 'A5'
