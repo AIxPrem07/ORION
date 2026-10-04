@@ -1,12 +1,15 @@
 import { useNavigate } from 'react-router-dom'
-import { Search, HelpCircle, LogOut, ArrowLeft, ShieldCheck, User } from 'lucide-react'
+import { Search, HelpCircle, LogOut, ArrowLeft, ShieldCheck, User, Calendar } from 'lucide-react'
 import { useUIStore } from '@store/ui.store'
 import { useAuthStore } from '@store/auth.store'
+import { useFiscalYearStore } from '@store/fiscal-year.store'
+import { currentFinancialYear, formatFinancialYearLabel } from '@utils/date'
 import { QuickCreate } from './QuickCreate'
 
 export function TopBar({ businessName }: { businessName: string }) {
   const { setGlobalSearchOpen, setShortcutsModalOpen } = useUIStore()
   const { user, isImpersonating, stopImpersonating, clearSession } = useAuthStore()
+  const { selectedFY, setSelectedFY, availableFYs } = useFiscalYearStore()
   const navigate = useNavigate()
 
   function handleReturnToAdmin() {
@@ -57,6 +60,24 @@ export function TopBar({ businessName }: { businessName: string }) {
 
         <div className="flex-1" />
 
+        {/* Global Financial Year Selector */}
+        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-indigo-200 bg-indigo-50/70 text-xs text-indigo-950 shadow-2xs">
+          <Calendar size={13} className="text-indigo-600 shrink-0" />
+          <span className="text-[10px] font-bold text-indigo-700 tracking-wider uppercase">FY</span>
+          <select
+            value={selectedFY}
+            onChange={(e) => setSelectedFY(e.target.value)}
+            className="bg-transparent font-bold text-xs text-indigo-900 focus:outline-none cursor-pointer pr-1"
+            title="Filter data and records by Financial Year"
+          >
+            <option value="ALL">All Financial Years</option>
+            {availableFYs.map((fy) => (
+              <option key={fy} value={fy}>
+                {formatFinancialYearLabel(fy)} {fy === currentFinancialYear() ? '(Current)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <button
           onClick={() => setShortcutsModalOpen(true)}

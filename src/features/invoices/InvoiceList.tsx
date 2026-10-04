@@ -14,6 +14,7 @@ import { Input } from '@components/ui/Input'
 import { useBusinessStore } from '@store/business.store'
 import { useNotificationStore } from '@store/notification.store'
 import { useUIStore } from '@store/ui.store'
+import { useFiscalYearStore } from '@store/fiscal-year.store'
 import {
   listInvoices,
   moveInvoiceToBin,
@@ -24,7 +25,7 @@ import {
   updateInvoiceNumber,
 } from '@services/invoice.service'
 import { formatCurrency } from '@utils/decimal'
-import { formatDate } from '@utils/date'
+import { formatDate, formatFinancialYearLabel } from '@utils/date'
 import { exportInvoicesToCSV, triggerCSVDownload } from '@services/import-export.service'
 import type { Invoice } from '@/types/invoice'
 
@@ -35,6 +36,7 @@ export default function InvoiceList() {
   const { business } = useBusinessStore()
   const { success, error } = useNotificationStore()
   const { openConfirm } = useUIStore()
+  const { selectedFY } = useFiscalYearStore()
 
   const [activeTab, setActiveTab] = useState<'active' | 'bin'>('active')
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -71,6 +73,7 @@ export default function InvoiceList() {
         page,
         pageSize: PAGE_SIZE,
         inBin: activeTab === 'bin',
+        financialYear: selectedFY === 'ALL' ? undefined : selectedFY,
       })
       setInvoices(result.data)
       setTotal(result.total)
@@ -80,7 +83,7 @@ export default function InvoiceList() {
     } finally {
       setIsLoading(false)
     }
-  }, [business, search, page, activeTab, loadBinCount, error])
+  }, [business, search, page, activeTab, selectedFY, loadBinCount, error])
 
   useEffect(() => {
     load()
@@ -333,7 +336,7 @@ export default function InvoiceList() {
         title="Invoices"
         subtitle={
           activeTab === 'active'
-            ? `${total} active invoice${total !== 1 ? 's' : ''}`
+            ? `${total} active invoice${total !== 1 ? 's' : ''}${selectedFY !== 'ALL' ? ` (${formatFinancialYearLabel(selectedFY)})` : ' (All FYs)'}`
             : `${total} invoice${total !== 1 ? 's' : ''} in Recycle Bin`
         }
         actions={

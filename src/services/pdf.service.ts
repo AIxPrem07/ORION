@@ -13,10 +13,12 @@ import { appDataDir, join } from '@tauri-apps/api/path'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { invoke } from '@tauri-apps/api/core'
 import { InvoicePDF } from '@/pdf/InvoicePDF'
+import { ChallanPDF } from '@/pdf/ChallanPDF'
 import { generateUPIQRCode, generateQRCodeDataURL } from '@utils/qr'
 import { paiseToRupees } from '@utils/decimal'
 import { getAppSetting } from '@services/business.service'
 import type { InvoiceWithItems } from '@/types/invoice'
+import type { ChallanWithItems } from '@/types/challan'
 import type { Business, InvoicePaperSize, InvoiceTheme } from '@/types/business'
 import type { InvoiceCustomDesign } from '@/types/invoice-design'
 import { getInvoiceDesignConfig } from './invoice-design.service'
@@ -175,6 +177,62 @@ export async function printInvoicePDF(
     await invoke('print_pdf', { filePath })
   } catch (err) {
     console.warn('[PDF] Native print_pdf failed, opening system viewer for printing:', err)
+    await openPath(filePath).catch(() => invoke('open_pdf', { filePath }))
+  }
+}
+
+/**
+ * Generates the PDF blob for a Delivery Challan
+ */
+export async function generateChallanPDFBlob(
+  challan: ChallanWithItems,
+  business: Business,
+): Promise<Blob> {
+  const doc = React.createElement(ChallanPDF, { challan, business })
+  return await pdf(doc as React.ReactElement).toBlob()
+}
+
+/**
+ * Triggers a browser/system download for a Delivery Challan PDF
+ */
+export async function downloadChallanPDF(
+  challan: ChallanWithItems,
+  business: Business,
+): Promise<void> {
+  const blob = await generateChallanPDFBlob(challan, business)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const sanitizedNum = (challan.challanNumber || 'Challan').replace(/[^a-zA-Z0-9_-]/g, '_')
+  a.download = `Challan_${sanitizedNum}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 15000)
+}
+
+/**
+ * Saves and triggers system printing for Delivery Challan PDF
+ */
+export async function printChallanPDF(
+  challan: ChallanWithItems,
+  business: Business,
+): Promise<void> {
+  const blob = await generateChallanPDFBlob(challan, business)
+  const arrayBuffer = await blob.arrayBuffer()
+  const bytes = new Uint8Array(arrayBuffer)
+
+  const sanitizedNum = (challan.challanNumber || 'Challan').replace(/[^a-zA-Z0-9_-]/g, '_')
+  const fileName = `Challan_${sanitizedNum}.pdf`
+
+  await writeFile(fileName, bytes, { baseDir: BaseDirectory.AppData })
+  const baseDir = await appDataDir()
+  const filePath = await join(baseDir, fileName)
+
+  try {
+    await invoke('print_pdf', { filePath })
+  } catch (err) {
+    console.warn('[PDF] Native print_pdf failed for challan, opening system viewer:', err)
     await openPath(filePath).catch(() => invoke('open_pdf', { filePath }))
   }
 }

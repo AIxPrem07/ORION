@@ -561,3 +561,22 @@ export async function getMonthlyInventoryReport(
     totalClosingStock,
   }
 }
+
+/**
+ * Remove an entry from stock history / stock movements.
+ * Inventory balances automatically reflect the removal.
+ */
+export async function deleteStockMovement(id: string, businessId: string): Promise<void> {
+  const existing = await dbSelect<{ id: string; product_id: string; quantity: number }>(
+    `SELECT id, product_id, quantity FROM stock_movements WHERE id = ? AND business_id = ?`,
+    [id, businessId],
+  )
+  if (existing.length === 0) {
+    throw new Error('Stock movement entry not found.')
+  }
+
+  await dbExecute(
+    `DELETE FROM stock_movements WHERE id = ? AND business_id = ?`,
+    [id, businessId],
+  )
+}

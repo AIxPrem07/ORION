@@ -10,6 +10,7 @@ import {
   CreditCard,
   RotateCcw,
   ChevronDown,
+  ScrollText,
 } from 'lucide-react'
 
 export function QuickCreate() {
@@ -36,6 +37,7 @@ export function QuickCreate() {
 
   const items = [
     { label: 'New Invoice', path: '/invoices/new', icon: FileText, shortcut: '⌘N' },
+    { label: 'New Delivery Challan', path: '/challans/new', icon: ScrollText },
     { label: 'New Purchase', path: '/purchases/new', icon: ShoppingCart },
     { label: 'New Customer', path: '/customers/new', icon: Users },
     { label: 'New Supplier', path: '/suppliers/new', icon: Truck },

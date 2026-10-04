@@ -4,9 +4,10 @@ import { PageHeader } from '@components/layout/PageHeader'
 import { StatCard } from '@components/ui/Card'
 import LoadingState from '@components/ui/LoadingState'
 import { useBusinessStore } from '@store/business.store'
+import { useFiscalYearStore } from '@store/fiscal-year.store'
 import { dbSelect } from '@db/client'
 import { formatCurrency, paiseToRupeesNum } from '@utils/decimal'
-import { currentFinancialYear } from '@utils/date'
+import { currentFinancialYear, financialYearStart, financialYearEnd, formatFinancialYearLabel } from '@utils/date'
 
 interface MonthlyRow {
   month: string
@@ -16,6 +17,7 @@ interface MonthlyRow {
 
 export default function BusinessAnalytics() {
   const { business } = useBusinessStore()
+  const { selectedFY } = useFiscalYearStore()
   const [monthlyData, setMonthlyData] = useState<Array<{ month: string; sales: number; collected: number }>>([])
   const [totals, setTotals] = useState({ sales: 0, collected: 0, outstanding: 0 })
   const [isLoading, setIsLoading] = useState(true)
@@ -24,18 +26,25 @@ export default function BusinessAnalytics() {
     if (!business) return
     async function load() {
       try {
-        const fy = currentFinancialYear()
-        const [year] = fy.split('-').map((s, i) => parseInt(s) + (i === 0 ? 2000 : 2000))
+        const isAll = selectedFY === 'ALL'
+        const whereDate = isAll
+          ? ''
+          : `AND (financial_year = ? OR invoice_date BETWEEN ? AND ?)`
+        const params: unknown[] = [business!.id]
+        if (!isAll) {
+          params.push(selectedFY, financialYearStart(selectedFY), financialYearEnd(selectedFY))
+        }
+
         const rows = await dbSelect<MonthlyRow>(
           `SELECT strftime('%Y-%m', invoice_date) as month,
              COALESCE(SUM(total_amount), 0) as total_sales,
              COALESCE(SUM(paid_amount), 0) as total_collected
            FROM invoices
            WHERE business_id = ? AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0
-             AND invoice_date BETWEEN ? AND ?
+             ${whereDate}
            GROUP BY month
            ORDER BY month ASC`,
-          [business!.id, `${year}-04-01`, `${year + 1}-03-31`]
+          params
         )
         const chartData = rows.map((r) => ({
           month: r.month,
@@ -49,13 +58,13 @@ export default function BusinessAnalytics() {
       } finally { setIsLoading(false) }
     }
     load()
-  }, [business])
+  }, [business, selectedFY])
 
   if (isLoading) return <LoadingState fullHeight />
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Business Analytics" subtitle={`FY ${currentFinancialYear()}`} />
+      <PageHeader title="Business Analytics" subtitle={formatFinancialYearLabel(selectedFY)} />
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Total Sales" value={formatCurrency(totals.sales)} />
         <StatCard label="Collected" value={formatCurrency(totals.collected)} />

@@ -136,13 +136,13 @@ export const DEFAULT_INVOICE_DESIGN: InvoiceCustomDesign = {
   zebraStriping: false,
   columnsVisibility: DEFAULT_COLUMNS_VISIBILITY,
   unifiedGrid: true, // Continuous unbroken frame with zero cuts/gaps
-  minTableRows: 8, // Pads single product bills with 7 empty rows and full column grid lines
+  minTableRows: 4, // Pads single product bills with empty rows and full column grid lines
   fontScale: 'normal',
 
   // Header & Logo (Brand name strong and big, no pre-added placeholder logo)
   headerLayout: 'classic',
   headerHeight: 'normal',
-  brandFontSize: 24,
+  brandFontSize: 20,
   brandTitle: '',
   showBrandSubtitle: false,
   brandSubtitle: 'Statutory GST Tax Invoice',

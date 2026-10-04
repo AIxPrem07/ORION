@@ -1,15 +1,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, PackagePlus, CalendarDays, Search, ArrowLeft } from 'lucide-react'
+import { Download, PackagePlus, CalendarDays, Search, ArrowLeft, Trash2 } from 'lucide-react'
 import { PageHeader } from '@components/layout/PageHeader'
 import { Button } from '@components/ui/Button'
 import { SearchInput } from '@components/ui/SearchInput'
 import LoadingState from '@components/ui/LoadingState'
 import { useBusinessStore } from '@store/business.store'
+import { useNotificationStore } from '@store/notification.store'
+import { useUIStore } from '@store/ui.store'
 import { dbSelect } from '@db/client'
 import { formatDateTime } from '@utils/date'
 import { exportStockMovementsToCSV, triggerCSVDownload } from '@services/import-export.service'
-import { getAllCurrentStock } from '@services/inventory.service'
+import { getAllCurrentStock, deleteStockMovement } from '@services/inventory.service'
 import { StockAdjustmentModal, type StockProductOption } from './StockAdjustmentModal'
 
 interface MovementRow {
@@ -28,6 +30,8 @@ interface MovementRow {
 
 export default function StockMovements() {
   const { business } = useBusinessStore()
+  const { success, error } = useNotificationStore()
+  const { openConfirm } = useUIStore()
   const navigate = useNavigate()
   const [movements, setMovements] = useState<MovementRow[]>([])
   const [products, setProducts] = useState<StockProductOption[]>([])
@@ -96,6 +100,25 @@ export default function StockMovements() {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  const handleDeleteMovement = (m: MovementRow) => {
+    openConfirm({
+      title: 'Remove Stock History Entry',
+      message: `Are you sure you want to remove this ${m.movement_type} entry of ${m.quantity > 0 ? '+' : ''}${m.quantity} ${m.unit_abbreviation || ''} for "${m.product_name}"? The product's stock will automatically recalculate.`,
+      confirmLabel: 'Remove Entry',
+      variant: 'danger',
+      onConfirm: async () => {
+        if (!business) return
+        try {
+          await deleteStockMovement(m.id, business.id)
+          success(`Stock entry for ${m.product_name} removed.`)
+          load()
+        } catch (err: any) {
+          error(err.message || 'Failed to remove stock entry')
+        }
+      },
+    })
   }
 
   const filteredMovements = movements.filter((m) => {
@@ -190,7 +213,7 @@ export default function StockMovements() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-orion-border">
               <tr>
-                {['Date & Time', 'Product Name', 'Packaging / Unit', 'Movement Type', 'Quantity', 'Stock Before', 'Stock After', 'Notes / Reference'].map((h) => (
+                {['Date & Time', 'Product Name', 'Packaging / Unit', 'Movement Type', 'Quantity', 'Stock Before', 'Stock After', 'Notes / Reference', 'Action'].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-orion-secondary uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -242,12 +265,22 @@ export default function StockMovements() {
                     <td className="px-4 py-2.5 text-xs text-orion-secondary max-w-xs truncate">
                       {m.notes ?? '—'}
                     </td>
+                    <td className="px-4 py-2.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMovement(m)}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Remove stock movement entry"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
               {filteredMovements.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-xs text-orion-secondary">
+                  <td colSpan={9} className="text-center py-10 text-xs text-orion-secondary">
                     No stock movements found matching your criteria.
                   </td>
                 </tr>

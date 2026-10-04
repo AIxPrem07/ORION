@@ -15,6 +15,7 @@ import migration_0001 from '../../src-tauri/migrations/0001_initial.sql?raw'
 import migration_0002 from '../../src-tauri/migrations/0002_gst_enhancements.sql?raw'
 import migration_0003 from '../../src-tauri/migrations/0003_licensing_and_product_keys.sql?raw'
 import migration_0004 from '../../src-tauri/migrations/0004_invoice_bin_and_numbering.sql?raw'
+import migration_0005 from '../../src-tauri/migrations/0005_challan_and_financial_year.sql?raw'
 
 import { dbExecute, dbSelect, getDb } from './client'
 import { nowISO } from '@utils/date'
@@ -46,6 +47,11 @@ const MIGRATIONS: Migration[] = [
     version: 4,
     description: 'Invoice Recycle Bin & Custom Numbering',
     sql: migration_0004,
+  },
+  {
+    version: 5,
+    description: 'Delivery Challans & Financial Year partitioning',
+    sql: migration_0005,
   },
 ]
 

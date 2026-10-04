@@ -14,7 +14,7 @@
 
 import { dbSelect, dbExecute, dbTransaction } from '@db/client'
 import { generateId } from '@utils/uuid'
-import { nowISO, todayISO } from '@utils/date'
+import { nowISO, todayISO, getFinancialYearFromDate, financialYearStart, financialYearEnd } from '@utils/date'
 import { normalizeError } from '@utils/error'
 import { calculateInvoiceTotals } from './gst.service'
 import { getNextInvoiceNumber } from './invoice-number.service'
@@ -79,6 +79,8 @@ function rowToInvoice(r: Record<string, unknown>): Invoice {
     // Recycle Bin
     isDeleted: Boolean(r.is_deleted),
     deletedAt: (r.deleted_at as string) ?? null,
+    // Financial Year
+    financialYear: (r.financial_year as string) ?? null,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
   }
@@ -192,6 +194,8 @@ export async function createDraftInvoice(input: CreateInvoiceInput): Promise<Inv
     ? customerToSnapshot(input.customer)
     : { id: '', name: 'Walk-in Customer', phone: null, email: null, address: null, city: null, state: null, stateCode: null, pin: null, gstin: null, pan: null }
 
+  const financialYear = getFinancialYearFromDate(input.formData.invoiceDate)
+
   await dbTransaction(async (tx) => {
     // Insert invoice (DRAFT - no invoice number assigned yet)
     await tx.execute(
@@ -204,6 +208,7 @@ export async function createDraftInvoice(input: CreateInvoiceInput): Promise<Inv
         shipping_name, shipping_address, shipping_city, shipping_state, shipping_state_code, shipping_pin,
         vehicle_number, transport_mode, transporter_name, transporter_id, lr_rr_number, lr_rr_date,
         shipping_charges, additional_charges, additional_charges_label,
+        financial_year,
         created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?,
@@ -214,6 +219,7 @@ export async function createDraftInvoice(input: CreateInvoiceInput): Promise<Inv
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
+        ?,
         ?, ?
       )`,
       [
@@ -253,6 +259,7 @@ export async function createDraftInvoice(input: CreateInvoiceInput): Promise<Inv
         totals.shippingCharges,
         totals.additionalCharges,
         input.formData.additionalChargesLabel ?? null,
+        financialYear,
         now,
         now,
       ],
@@ -339,12 +346,15 @@ export async function finalizeInvoice(
   let assignedNumber = ''
 
   await dbTransaction(async (tx) => {
-    // If a custom invoice number was specified, use it; otherwise get next sequential number
+    const invDate = existing.invoiceDate || now
+    const fy = getFinancialYearFromDate(invDate)
+
+    // If a custom invoice number was specified, use it; otherwise get next sequential number for this FY
     const customNum = customInvoiceNumber?.trim()
     if (customNum) {
       assignedNumber = customNum
     } else {
-      const { invoiceNumber } = await getNextInvoiceNumber({ businessId, prefix: invoicePrefix })
+      const { invoiceNumber } = await getNextInvoiceNumber({ businessId, prefix: invoicePrefix, financialYear: fy })
       assignedNumber = invoiceNumber
     }
 
@@ -357,10 +367,10 @@ export async function finalizeInvoice(
       throw new Error(`Invoice number "${assignedNumber}" already exists.`)
     }
 
-    // Update invoice to FINALIZED
+    // Update invoice to FINALIZED and store financial_year
     await tx.execute(
-      `UPDATE invoices SET invoice_number = ?, status = 'FINALIZED', updated_at = ? WHERE id = ?`,
-      [assignedNumber, now, invoiceId],
+      `UPDATE invoices SET invoice_number = ?, financial_year = ?, status = 'FINALIZED', updated_at = ? WHERE id = ?`,
+      [assignedNumber, fy, now, invoiceId],
     )
 
     // Deduct stock for each product line item
@@ -799,6 +809,7 @@ export async function getInvoiceWithItems(id: string): Promise<InvoiceWithItems 
 
 export interface InvoiceListFilters {
   businessId: string
+  financialYear?: string
   search?: string
   customerId?: string
   status?: string
@@ -816,6 +827,11 @@ export async function listInvoices(
   const inBin = Boolean(filters.inBin)
   const conditions: string[] = ['business_id = ?', inBin ? 'COALESCE(is_deleted, 0) = 1' : 'COALESCE(is_deleted, 0) = 0']
   const params: unknown[] = [filters.businessId]
+
+  if (filters.financialYear && filters.financialYear !== 'ALL') {
+    conditions.push('(financial_year = ? OR invoice_date BETWEEN ? AND ?)')
+    params.push(filters.financialYear, financialYearStart(filters.financialYear), financialYearEnd(filters.financialYear))
+  }
 
   if (filters.search) {
     conditions.push('(invoice_number LIKE ? OR json_extract(customer_snapshot, "$.name") LIKE ?)')
@@ -913,7 +929,13 @@ export async function duplicateInvoice(
 // DASHBOARD QUERIES
 // ============================================================
 
-export async function getDashboardStats(businessId: string, dateFrom: string, dateTo: string) {
+export async function getDashboardStats(businessId: string, dateFrom?: string, dateTo?: string) {
+  const dateClause = dateFrom && dateTo ? 'AND invoice_date BETWEEN ? AND ?' : ''
+  const queryParams: unknown[] = [businessId]
+  if (dateFrom && dateTo) {
+    queryParams.push(dateFrom, dateTo)
+  }
+
   const [salesStats, todayInvoices, pendingPayments] = await Promise.all([
     dbSelect<{
       total_invoiced: number
@@ -925,8 +947,8 @@ export async function getDashboardStats(businessId: string, dateFrom: string, da
          COALESCE(SUM(paid_amount), 0) as total_paid,
          COUNT(*) as invoice_count
        FROM invoices
-       WHERE business_id = ? AND invoice_date BETWEEN ? AND ? AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0`,
-      [businessId, dateFrom, dateTo],
+       WHERE business_id = ? ${dateClause} AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0`,
+      queryParams,
     ),
     dbSelect<{ count: number }>(
       `SELECT COUNT(*) as count FROM invoices WHERE business_id = ? AND invoice_date = date('now') AND status != 'CANCELLED' AND COALESCE(is_deleted, 0) = 0`,

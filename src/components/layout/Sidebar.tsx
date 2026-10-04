@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Landmark,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react'
 import { useUIStore } from '@store/ui.store'
@@ -38,6 +39,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
       { label: 'Invoices', path: '/invoices', icon: FileText },
+      { label: 'Challans', path: '/challans', icon: ScrollText },
       { label: 'Purchases', path: '/purchases', icon: ShoppingCart },
       { label: 'Returns & Notes', path: '/returns', icon: RotateCcw },
     ],

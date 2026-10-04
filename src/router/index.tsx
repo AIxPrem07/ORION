@@ -12,6 +12,8 @@ const Dashboard = lazy(() => import('@features/dashboard/Dashboard'))
 const AdminDashboard = lazy(() => import('@features/admin/AdminDashboard'))
 const InvoiceList = lazy(() => import('@features/invoices/InvoiceList'))
 const InvoiceEditor = lazy(() => import('@features/invoices/InvoiceEditor'))
+const ChallanList = lazy(() => import('@features/challans/ChallanList'))
+const ChallanEditor = lazy(() => import('@features/challans/ChallanEditor'))
 const Customers = lazy(() => import('@features/customers/Customers'))
 const CustomerDetail = lazy(() => import('@features/customers/CustomerDetail'))
 const CustomerEditor = lazy(() => import('@features/customers/CustomerEditor'))
@@ -95,6 +97,12 @@ export const router = createBrowserRouter([
       { path: 'invoices/new', element: wrap(InvoiceEditor) },
       { path: 'invoices/:id/edit', element: wrap(InvoiceEditor) },
       { path: 'invoices/:id', element: wrap(InvoiceEditor) },
+
+      // Delivery Challans
+      { path: 'challans', element: wrap(ChallanList) },
+      { path: 'challans/new', element: wrap(ChallanEditor) },
+      { path: 'challans/:id/edit', element: wrap(ChallanEditor) },
+      { path: 'challans/:id', element: wrap(ChallanEditor) },
 
       // Customers
       { path: 'customers', element: wrap(Customers) },

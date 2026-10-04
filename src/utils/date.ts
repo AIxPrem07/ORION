@@ -36,20 +36,50 @@ export function nowISO(): string {
 
 /** Get current Indian financial year string, e.g. "26-27" */
 export function currentFinancialYear(): string {
-  const now = new Date()
-  const month = now.getMonth() + 1 // 1-12
-  const year = now.getFullYear()
+  return getFinancialYearFromDate(new Date())
+}
+
+/** Get Indian financial year string for any given date or ISO string, e.g. "26-27" */
+export function getFinancialYearFromDate(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return currentFinancialYear()
+  const d = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput
+  if (!isValid(d)) return currentFinancialYear()
+  const month = d.getMonth() + 1 // 1-12
+  const year = d.getFullYear()
   if (month >= 4) {
-    // April or later: FY starts this year
     const startYear = year % 100
     const endYear = (year + 1) % 100
     return `${String(startYear).padStart(2, '0')}-${String(endYear).padStart(2, '0')}`
   } else {
-    // Jan-March: FY started last year
     const startYear = (year - 1) % 100
     const endYear = year % 100
     return `${String(startYear).padStart(2, '0')}-${String(endYear).padStart(2, '0')}`
   }
+}
+
+/** Format FY code like "26-27" to human label "FY 2026-27" */
+export function formatFinancialYearLabel(fyString: string): string {
+  if (!fyString || fyString === 'ALL') return 'All Financial Years'
+  const parts = fyString.split('-')
+  if (parts.length === 2) {
+    const startYear = 2000 + parseInt(parts[0], 10)
+    return `FY ${startYear}-${parts[1]}`
+  }
+  return `FY ${fyString}`
+}
+
+/** Get list of selectable financial years */
+export function getRecentFinancialYears(): string[] {
+  const current = currentFinancialYear()
+  const [currStart] = current.split('-').map(Number)
+  const fys: string[] = []
+  // Generate next FY, current FY, and past 3 FYs
+  for (let i = currStart + 1; i >= currStart - 3; i--) {
+    const s = String(i).padStart(2, '0')
+    const e = String((i + 1) % 100).padStart(2, '0')
+    fys.push(`${s}-${e}`)
+  }
+  return fys
 }
 
 /** Get financial year start date (April 1) as ISO string */

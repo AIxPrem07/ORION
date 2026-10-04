@@ -23,6 +23,7 @@ export type AuditEntityType =
   | 'PRODUCT'
   | 'PAYMENT'
   | 'STOCK'
+  | 'CHALLAN'
   | 'BUSINESS'
   | 'BACKUP'
   | 'SETTINGS'

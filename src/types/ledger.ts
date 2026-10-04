@@ -1,6 +1,6 @@
 import type { UUID, ISODateString, ISODateTimeString, Paise } from './common'
 
-export type LedgerReferenceType = 'INVOICE' | 'PURCHASE' | 'PAYMENT' | 'ADJUSTMENT' | 'OPENING' | 'RETURN' | 'CREDIT_NOTE' | 'DEBIT_NOTE'
+export type LedgerReferenceType = 'INVOICE' | 'PURCHASE' | 'PAYMENT' | 'ADJUSTMENT' | 'OPENING' | 'RETURN' | 'CREDIT_NOTE' | 'DEBIT_NOTE' | 'CHALLAN'
 export type LedgerPartyType = 'CUSTOMER' | 'SUPPLIER'
 
 export interface LedgerEntry {

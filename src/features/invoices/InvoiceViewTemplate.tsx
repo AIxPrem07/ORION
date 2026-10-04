@@ -224,10 +224,10 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
   const fontScale = design.fontScale || 'normal'
   const fontScaleContainerClass =
     fontScale === 'xlarge'
-      ? (paperSize === 'A5' ? 'text-xs sm:text-[14px]' : 'text-sm sm:text-[16px]')
+      ? (paperSize === 'A5' ? 'text-[12px] sm:text-[13px]' : 'text-[13px] sm:text-[14px]')
       : fontScale === 'large'
-      ? (paperSize === 'A5' ? 'text-[12px] sm:text-xs' : 'text-[13.5px] sm:text-[15px]')
-      : (paperSize === 'A5' ? 'text-[11.5px]' : 'text-[13px] sm:text-[14px]')
+      ? (paperSize === 'A5' ? 'text-[11px] sm:text-[12px]' : 'text-[12px] sm:text-[13px]')
+      : (paperSize === 'A5' ? 'text-[10px] sm:text-[11px]' : 'text-[11.5px] sm:text-[12.5px]')
 
   const containerClass = paperSize === 'A5' ? `max-w-2xl ${fontScaleContainerClass}` : `max-w-4xl ${fontScaleContainerClass}`
   const densityPadding =
@@ -532,7 +532,7 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
               Invoice Details
             </div>
             <div className="p-3 bg-white flex-1 min-h-[5rem] space-y-1.5 text-xs">
-              <div className="flex items-start justify-between gap-2 border-b border-gray-100/80 pb-1">
+              <div className="flex items-start justify-between gap-2 border-b border-gray-200 pb-1">
                 <span className="text-gray-500 font-medium shrink-0">Place of Supply</span>
                 <span className="font-semibold text-gray-900 text-right break-words min-w-0">
                   {customer?.stateCode ? `${customer.stateCode}-${customer.state}` : customer?.state || business.state || '—'}
@@ -540,25 +540,25 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
               </div>
               {design.showTransportInfo && (
                 <>
-                  <div className="flex items-start justify-between gap-2 border-b border-gray-100/80 pb-1">
+                  <div className="flex items-start justify-between gap-2 border-b border-gray-200 pb-1">
                     <span className="text-gray-500 font-medium shrink-0">Transporter</span>
                     <span className="font-medium text-gray-900 text-right break-words min-w-0">
                       {invoice.transporterName || 'Self'}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-2 border-b border-gray-100/80 pb-1">
+                  <div className="flex items-start justify-between gap-2 border-b border-gray-200 pb-1">
                     <span className="text-gray-500 font-medium shrink-0">L.R. No.</span>
                     <span className="font-medium text-gray-900 text-right break-words min-w-0">
                       {invoice.lrRrNumber || '—'}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-2 border-b border-gray-100/80 pb-1">
+                  <div className="flex items-start justify-between gap-2 border-b border-gray-200 pb-1">
                     <span className="text-gray-500 font-medium shrink-0">Vehicle No.</span>
                     <span className="font-medium text-gray-900 text-right break-words min-w-0">
                       {invoice.vehicleNumber || '—'}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-2 border-b border-gray-100/80 pb-1">
+                  <div className="flex items-start justify-between gap-2 border-b border-gray-200 pb-1">
                     <span className="text-gray-500 font-medium shrink-0">Transport Mode</span>
                     <span className="font-medium text-gray-900 text-right break-words min-w-0">
                       {invoice.transportMode || 'Road'}
@@ -820,12 +820,12 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
               })}
 
               {/* Blank Padding Rows for Full Bill Layout */}
-              {Array.from({ length: Math.max(0, (design.minTableRows ?? 8) - invoice.items.length) }).map((_, bIdx) => {
+              {Array.from({ length: Math.max(0, Math.min(4, (design.minTableRows ?? 4) - invoice.items.length)) }).map((_, bIdx) => {
                 const isZebra = (invoice.items.length + bIdx) % 2 === 1 && design.zebraStriping
                 return (
                   <tr
                     key={`blank-row-${bIdx}`}
-                    className={`h-7 sm:h-8 ${isZebra ? 'bg-gray-50/70' : 'bg-white'}`}
+                    className={`h-5 sm:h-6 ${isZebra ? 'bg-gray-50/70' : 'bg-white'}`}
                     style={{
                       borderBottom: showRowDividers ? `${borderWidth} solid ${gridBorderColor}` : 'none',
                     }}
@@ -1041,7 +1041,7 @@ export const InvoiceViewTemplate: React.FC<InvoiceViewTemplateProps> = ({
             >
               Amounts
             </div>
-            <div className="p-3 bg-white space-y-1 text-xs divide-y divide-gray-100 flex-1">
+            <div className="p-3 bg-white space-y-1 text-xs divide-y divide-gray-200 flex-1">
               <div className="flex justify-between items-center gap-2 text-gray-600 pt-0.5">
                 <span className="shrink-0">Sub Total</span>
                 <span className="tabular-nums font-medium text-gray-800 text-right min-w-0">

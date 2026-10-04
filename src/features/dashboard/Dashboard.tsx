@@ -6,10 +6,11 @@ import { StatCard } from '@components/ui/Card'
 import { Button } from '@components/ui/Button'
 import LoadingState from '@components/ui/LoadingState'
 import { useBusinessStore } from '@store/business.store'
+import { useFiscalYearStore } from '@store/fiscal-year.store'
 import { getDashboardStats } from '@services/invoice.service'
 import { getAllCurrentStock } from '@services/inventory.service'
 import { formatCurrency } from '@utils/decimal'
-import { currentFinancialYear } from '@utils/date'
+import { currentFinancialYear, financialYearStart, financialYearEnd, formatFinancialYearLabel } from '@utils/date'
 import { listInvoices } from '@services/invoice.service'
 import type { Invoice } from '@/types/invoice'
 import { InvoiceStatusBadge, PaymentStatusBadge } from '@components/ui/Badge'
@@ -17,6 +18,7 @@ import { formatDate } from '@utils/date'
 
 export default function Dashboard() {
   const { business } = useBusinessStore()
+  const { selectedFY } = useFiscalYearStore()
   const navigate = useNavigate()
   const [stats, setStats] = useState<Awaited<ReturnType<typeof getDashboardStats>> | null>(null)
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([])
@@ -27,13 +29,16 @@ export default function Dashboard() {
     if (!business) return
     async function load() {
       try {
-        const fy = currentFinancialYear()
-        const [fyStart] = fy.split('-').map((s, i) => i === 0 ? parseInt(s) + 2000 : parseInt(s) + 2000)
-        const dateFrom = `${fyStart}-04-01`
-        const dateTo = `${fyStart + 1}-03-31`
+        const isAll = selectedFY === 'ALL'
+        const dateFrom = isAll ? undefined : financialYearStart(selectedFY)
+        const dateTo = isAll ? undefined : financialYearEnd(selectedFY)
         const [dashStats, invoices, stockItems] = await Promise.all([
           getDashboardStats(business!.id, dateFrom, dateTo),
-          listInvoices({ businessId: business!.id, pageSize: 8 }),
+          listInvoices({
+            businessId: business!.id,
+            financialYear: isAll ? undefined : selectedFY,
+            pageSize: 8,
+          }),
           getAllCurrentStock(business!.id),
         ])
         setStats(dashStats)
@@ -44,7 +49,7 @@ export default function Dashboard() {
       }
     }
     load()
-  }, [business])
+  }, [business, selectedFY])
 
   if (isLoading) return <LoadingState fullHeight />
 
@@ -66,7 +71,7 @@ export default function Dashboard() {
                 {business?.name || 'ORION Business Suite'}
               </h1>
               <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">
-                Active FY {currentFinancialYear()}
+                {formatFinancialYearLabel(selectedFY)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">

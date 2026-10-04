@@ -91,6 +91,8 @@ export interface Invoice {
   // Recycle Bin
   isDeleted?: boolean
   deletedAt?: ISODateTimeString | null
+  // Financial Year
+  financialYear?: string | null
   createdAt: ISODateTimeString
   updatedAt: ISODateTimeString
 }

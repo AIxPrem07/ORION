@@ -45,7 +45,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             <img src="/logo.png" alt="ORION" className="w-3.5 h-3.5 rounded object-cover" />
             &copy; 2026 ORION INC. All rights reserved.
           </span>
-          <span className="font-mono text-gray-400">v1.2 Pro</span>
+          <span className="font-mono text-gray-400">v1.5 Pro</span>
         </div>
       </div>
     </Modal>
